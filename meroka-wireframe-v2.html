@@ -1,0 +1,1743 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Meroka — Data Architecture Pipeline</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #fafbfc; font-family: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif; overflow-x: auto; }
+
+.header { text-align: center; padding: 20px 0 6px; position: relative; }
+h1 { font-size: 20px; font-weight: 700; color: #111; }
+.subtitle { font-size: 11px; color: #888; margin-top: 3px; }
+
+/* Status controls — top right */
+.status-controls {
+  position: absolute; top: 12px; right: 24px;
+  display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: flex-end; max-width: 460px;
+}
+.status-btn {
+  padding: 4px 10px; border-radius: 6px; font-size: 9px; font-weight: 700;
+  border: 1.5px solid #ddd; background: #fff; color: #666; cursor: pointer;
+  transition: all 0.2s; text-transform: uppercase; letter-spacing: 0.5px;
+}
+.status-btn:hover { border-color: #aaa; color: #333; }
+.status-btn.active { border-color: #22c55e; background: #f0fdf4; color: #16a34a; }
+.status-btn.active-blue { border-color: #6366f1; background: #eef2ff; color: #4f46e5; }
+.status-btn.active-amber { border-color: #f59e0b; background: #fffbeb; color: #b45309; }
+.status-btn.active-red { border-color: #ef4444; background: #fef2f2; color: #dc2626; }
+
+/* Pipeline */
+.pipe-wrap { position: relative; padding: 16px 24px 32px; }
+.pipeline { display: flex; align-items: stretch; gap: 0; min-width: 1380px; }
+.stage { flex-shrink: 0; }
+.stage-label {
+  font-size: 9px; font-weight: 800; text-transform: uppercase;
+  letter-spacing: 2px; color: #999; text-align: center; margin-bottom: 10px;
+}
+
+/* Flow arrows */
+.flow-arrow {
+  display: flex; align-items: center; justify-content: center;
+  width: 36px; flex-shrink: 0; position: relative;
+}
+.flow-arrow::before {
+  content: ''; position: absolute; top: 10%; bottom: 10%; left: 50%;
+  width: 2px; background: linear-gradient(to bottom, transparent, #ddd 15%, #ddd 85%, transparent);
+  transform: translateX(-50%);
+}
+.flow-arrow .arr { background: #fafbfc; padding: 6px 0; z-index: 1; color: #bbb; font-size: 22px; line-height: 1; }
+
+/* === SOURCES === */
+.sources-stage { width: 260px; }
+.source-group { margin-bottom: 8px; border: 1.5px solid #e0e0e0; border-radius: 7px; background: #fff; overflow: hidden; }
+.sg-header {
+  padding: 6px 10px; font-size: 9px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid #eee;
+}
+.sg-gov .sg-header { background: #e8f0fe; color: #1a56db; }
+.sg-cost .sg-header { background: #e6f4ea; color: #137333; }
+.sg-quality .sg-header { background: #fef7e0; color: #b05e0a; }
+.sg-web .sg-header { background: #fce8e6; color: #c5221f; }
+.sg-employer .sg-header { background: #f3e8fd; color: #7627bb; }
+.sg-ai .sg-header { background: #fce4ec; color: #c62828; }
+
+.src-item {
+  padding: 5px 10px; font-size: 10px; display: flex; align-items: center;
+  justify-content: space-between; border-bottom: 1px solid #f5f5f5;
+  cursor: default; transition: opacity 0.2s, background 0.15s;
+}
+.src-item:last-child { border-bottom: none; }
+.src-item:hover { background: #f8f9ff; }
+.src-item .sn { font-weight: 600; color: #333; flex: 1; }
+.src-item .sm {
+  font-size: 7px; font-weight: 800; text-transform: uppercase;
+  padding: 2px 5px; border-radius: 7px; letter-spacing: 0.4px; flex-shrink: 0; margin-left: 4px;
+}
+.m-csv { background: #e3f2fd; color: #1565c0; }
+.m-api { background: #e8f5e9; color: #2e7d32; }
+.m-json { background: #e0f7fa; color: #00838f; }
+.m-scraper { background: #fff3e0; color: #e65100; }
+.m-agent { background: #fce4ec; color: #c62828; }
+.m-derived { background: #f3e5f5; color: #6a1b9a; }
+.m-curated { background: #f5f5f5; color: #555; }
+
+/* Source status badges */
+.src-status-badge {
+  display: none; font-size: 10px; margin-left: 4px; flex-shrink: 0;
+}
+.pipeline.show-status .src-item.src-completed .src-status-badge {
+  display: inline; color: #22c55e;
+}
+
+/* Source effort dots */
+.src-effort {
+  display: none; width: 6px; height: 6px; border-radius: 50%; margin-left: 5px; flex-shrink: 0;
+}
+.effort-low { background: #86efac; }
+.effort-med { background: #fcd34d; }
+.effort-high { background: #fb923c; }
+.effort-vhigh { background: #f87171; }
+.pipeline.show-effort .src-effort { display: inline-block; }
+
+/* Impact mode — sources become clickable */
+.pipeline.impact-mode .src-item { cursor: pointer; }
+.pipeline.impact-mode .src-item:hover { background: #fff0f0; }
+.src-item.impact-locked { background: #fef2f2 !important; border-left: 3px solid #ef4444; }
+
+/* === LAKE === */
+.lake-stage { width: 110px; }
+.lake-box {
+  background: linear-gradient(135deg, #1a237e 0%, #283593 50%, #1565c0 100%);
+  border-radius: 10px; height: 100%; min-height: 400px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 16px 8px; color: #fff; text-align: center; position: relative; overflow: hidden;
+  transition: opacity 0.2s, box-shadow 0.3s;
+}
+.lake-box::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+  background: repeating-linear-gradient(0deg, transparent, transparent 28px, rgba(255,255,255,0.03) 28px, rgba(255,255,255,0.03) 29px);
+}
+.lake-title { font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 14px; z-index: 1; }
+.lake-fmt { font-size: 8px; font-weight: 600; background: rgba(255,255,255,0.15); padding: 3px 8px; border-radius: 10px; margin: 2px 0; z-index: 1; }
+.lake-box.hl { box-shadow: 0 0 20px rgba(21,101,192,0.4); }
+
+/* === WAREHOUSE === */
+.warehouse-stage { width: 520px; }
+.wh-box {
+  border: 2px solid #111; border-radius: 10px; background: #f8f8fc;
+  padding: 14px; height: 100%;
+}
+.wh-title {
+  font-size: 11px; font-weight: 800; text-transform: uppercase;
+  letter-spacing: 2px; color: #111; text-align: center; margin-bottom: 12px;
+}
+.fsec { margin-bottom: 8px; }
+.fsec-label { font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #999; margin-bottom: 3px; padding-left: 2px; }
+.frow { display: flex; flex-wrap: wrap; gap: 3px; }
+.field {
+  padding: 3px 7px; border-radius: 4px; font-size: 9px;
+  font-family: 'SF Mono', 'Fira Code', monospace; font-weight: 600;
+  border: 1.5px solid; cursor: default; white-space: nowrap;
+  transition: opacity 0.2s, transform 0.15s, box-shadow 0.15s, border-color 0.2s;
+  position: relative;
+}
+.field:hover { transform: scale(1.05); z-index: 2; position: relative; }
+
+.f-identity { background: #eef; border-color: #aac; color: #336; }
+.f-roster { background: #eef; border-color: #aac; color: #336; }
+.f-independence { background: #fee; border-color: #daa; color: #633; }
+.f-services { background: #efe; border-color: #ada; color: #363; }
+.f-revenue { background: #efe; border-color: #ada; color: #363; }
+.f-quality { background: #ffe; border-color: #dda; color: #663; }
+.f-satisfaction { background: #ffe; border-color: #dda; color: #663; }
+.f-comparison { background: #fef; border-color: #dad; color: #636; }
+.f-employer { background: #fef; border-color: #dad; color: #636; }
+.f-technology { background: #eef; border-color: #aac; color: #336; }
+
+/* Heatmap mode */
+.field .heat-dot {
+  display: none; position: absolute; top: -3px; right: -3px;
+  width: 8px; height: 8px; border-radius: 50%; border: 1px solid #fff;
+  font-size: 0; z-index: 3;
+}
+.pipeline.show-heatmap .field .heat-dot { display: block; }
+.heat-0 { background: #d1d5db; }
+.heat-1 { background: #93c5fd; }
+.heat-2 { background: #fbbf24; }
+.heat-3 { background: #fb923c; }
+.heat-4 { background: #ef4444; }
+.pipeline.show-heatmap .field.heat-unused { opacity: 0.35; }
+
+/* Risk mode — single source indicator */
+.field .risk-dot {
+  display: none; position: absolute; bottom: -3px; left: -3px;
+  width: 7px; height: 7px; border-radius: 50%; border: 1px solid #fff;
+  z-index: 3; background: #ef4444;
+}
+.pipeline.show-risk .field.single-source .risk-dot { display: block; }
+.pipeline.show-risk .field.multi-source { border-color: #22c55e; }
+
+/* Field tooltip */
+.field-tooltip {
+  display: none; position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%);
+  background: #1e293b; color: #f8fafc; padding: 5px 8px; border-radius: 5px;
+  font-size: 8px; font-family: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif;
+  font-weight: 500; white-space: nowrap; z-index: 100; pointer-events: none;
+  line-height: 1.4; max-width: 220px; white-space: normal; text-align: left;
+}
+.field-tooltip::after {
+  content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
+  border: 4px solid transparent; border-top-color: #1e293b;
+}
+.field:hover .field-tooltip { display: block; }
+
+/* Field selection mode (for create form) */
+.field.selectable { cursor: pointer; }
+.field.selectable:hover { box-shadow: 0 0 0 2px rgba(99,102,241,0.5); transform: scale(1.08); }
+.field.selected { box-shadow: 0 0 0 2.5px #6366f1; transform: scale(1.06); z-index: 2; position: relative; }
+
+/* === PROJECTS === */
+.projects-stage { width: 300px; }
+.proj-box {
+  border: 2px solid #ddd; border-radius: 10px; background: #fff;
+  padding: 14px; margin-bottom: 12px; cursor: default;
+  transition: opacity 0.2s, border-color 0.3s, box-shadow 0.3s;
+}
+.proj-box:hover, .proj-box.hl { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,0.15); }
+.proj-header { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+.proj-name { font-size: 13px; font-weight: 700; color: #111; margin-bottom: 5px; }
+.proj-desc { font-size: 9px; color: #666; line-height: 1.5; margin-bottom: 6px; }
+.proj-meta { font-size: 8px; font-weight: 700; color: #6366f1; text-transform: uppercase; letter-spacing: 0.5px; }
+.proj-placeholder { border-style: dashed; border-color: #ddd; background: #fafafa; }
+.proj-placeholder .proj-name { color: #bbb; }
+.proj-placeholder .proj-desc { color: #ccc; font-style: italic; }
+
+/* Project type badges */
+.proj-type-badge {
+  display: inline-block; padding: 2px 8px; border-radius: 10px;
+  font-size: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.8px;
+  flex-shrink: 0; margin-bottom: 5px;
+}
+.proj-type-badge.external { background: #eef2ff; color: #4f46e5; border: 1px solid #c7d2fe; }
+.proj-type-badge.internal { background: #f3f4f6; color: #6b7280; border: 1px solid #d1d5db; }
+
+/* Detail panel overlay */
+.detail-overlay {
+  display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.25); z-index: 200;
+  justify-content: center; align-items: flex-start; padding: 40px 24px;
+}
+.detail-overlay.open { display: flex; }
+.detail-panel {
+  background: #fff; border-radius: 14px; width: 560px; max-height: calc(100vh - 80px);
+  overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.2), 0 0 0 1px rgba(0,0,0,0.05);
+  transform: translateY(12px) scale(0.97); opacity: 0;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+.detail-overlay.open .detail-panel {
+  transform: translateY(0) scale(1); opacity: 1;
+}
+.detail-panel-header {
+  padding: 20px 24px 14px; border-bottom: 1px solid #eee;
+  display: flex; align-items: flex-start; gap: 12px; position: sticky; top: 0;
+  background: #fff; border-radius: 14px 14px 0 0; z-index: 1;
+}
+.detail-panel-header-info { flex: 1; }
+.detail-panel-title {
+  font-size: 17px; font-weight: 800; color: #111; display: flex; align-items: center; gap: 8px;
+}
+.detail-panel-desc {
+  font-size: 10px; color: #666; line-height: 1.5; margin-top: 6px;
+}
+.detail-panel-meta {
+  font-size: 9px; font-weight: 700; color: #6366f1; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 6px;
+}
+.detail-close {
+  background: #f3f4f6; border: none; width: 32px; height: 32px; border-radius: 8px;
+  font-size: 18px; cursor: pointer; color: #999; display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; transition: all 0.15s;
+}
+.detail-close:hover { background: #e5e7eb; color: #333; }
+.detail-panel-body {
+  padding: 16px 24px 24px;
+}
+.proj-section-title {
+  font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.2px;
+  color: #999; margin: 16px 0 6px;
+}
+.proj-section-title:first-child { margin-top: 0; }
+.proj-objective {
+  font-size: 11px; color: #444; line-height: 1.7; margin-bottom: 4px;
+}
+
+/* Workflow items */
+.wf-item {
+  padding: 8px 10px; margin: 4px 0; border-radius: 7px; border: 1px solid #e8e8e8;
+  background: #fafafa; cursor: default; transition: background 0.15s, border-color 0.15s;
+  display: flex; align-items: flex-start; gap: 8px;
+}
+.wf-item:hover { background: #f0f0ff; border-color: #c7d2fe; }
+.wf-content { flex: 1; min-width: 0; }
+.wf-number {
+  font-size: 10px; font-weight: 800; color: #6366f1; margin-right: 4px;
+}
+.wf-name { font-size: 11px; font-weight: 600; color: #333; }
+.wf-fields-list {
+  font-size: 8px; color: #999; margin-top: 3px;
+  font-family: 'SF Mono', 'Fira Code', monospace; line-height: 1.5;
+}
+.wf-desc {
+  font-size: 9px; color: #555; line-height: 1.5; margin-top: 3px; margin-bottom: 2px;
+}
+
+/* Workflow readiness dot */
+.wf-status-dot {
+  width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 5px;
+}
+.wf-dot-green { background: #22c55e; }
+.wf-dot-yellow { background: #eab308; }
+.wf-dot-red { background: #ef4444; }
+
+/* Data readiness */
+.data-readiness { margin-top: 6px; }
+.readiness-bar-wrap {
+  background: #e5e7eb; border-radius: 4px; height: 6px; margin: 4px 0; overflow: hidden;
+}
+.readiness-bar {
+  height: 100%; border-radius: 4px; background: #22c55e; transition: width 0.3s;
+}
+.readiness-text { font-size: 9px; color: #555; font-weight: 600; }
+.missing-src {
+  display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 8px;
+  font-weight: 600; background: #fef2f2; color: #dc2626; border: 1px solid #fecaca;
+  margin: 2px 2px 2px 0;
+}
+.missing-src .mpos { font-weight: 800; color: #991b1b; }
+
+/* Project timeline */
+.proj-timeline {
+  margin-top: 6px; padding: 6px 0;
+}
+.timeline-bar-wrap {
+  position: relative; background: #e5e7eb; border-radius: 4px; height: 16px; overflow: hidden;
+}
+.timeline-segment {
+  position: absolute; top: 0; height: 100%; transition: width 0.3s;
+}
+.timeline-done { background: #22c55e; left: 0; border-radius: 4px 0 0 4px; }
+.timeline-pending { background: #fbbf24; border-radius: 0; }
+.timeline-labels {
+  display: flex; justify-content: space-between; margin-top: 3px;
+}
+.timeline-label { font-size: 7px; font-weight: 700; color: #999; text-transform: uppercase; }
+
+/* Field gap section in project */
+.gap-field {
+  display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 8px;
+  font-weight: 600; background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0;
+  margin: 2px 2px 2px 0;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+}
+.gap-unused {
+  background: #f3f4f6; color: #9ca3af; border: 1px solid #e5e7eb;
+}
+
+/* Backlog panel */
+.backlog-overlay {
+  display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.15); z-index: 100;
+}
+.backlog-overlay.open { display: block; }
+.backlog-panel {
+  position: fixed; top: 50px; right: 24px; width: 420px;
+  background: #fff; border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+  z-index: 101; max-height: 80vh; overflow-y: auto;
+  transform: translateY(-10px); opacity: 0; transition: transform 0.25s, opacity 0.25s;
+}
+.backlog-overlay.open .backlog-panel {
+  transform: translateY(0); opacity: 1;
+}
+.backlog-header {
+  padding: 14px 16px; border-bottom: 1px solid #eee;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.backlog-title { font-size: 13px; font-weight: 700; color: #111; }
+.backlog-close {
+  background: none; border: none; font-size: 18px; cursor: pointer; color: #999;
+  width: 28px; height: 28px; border-radius: 6px; display: flex; align-items: center; justify-content: center;
+}
+.backlog-close:hover { background: #f3f4f6; color: #333; }
+.backlog-list { padding: 8px 0; }
+.backlog-item {
+  display: flex; align-items: center; gap: 10px; padding: 8px 16px;
+  border-bottom: 1px solid #f5f5f5;
+}
+.backlog-item:last-child { border-bottom: none; }
+.backlog-rank {
+  font-size: 11px; font-weight: 800; color: #6366f1; width: 22px; text-align: right; flex-shrink: 0;
+}
+.backlog-info { flex: 1; }
+.backlog-name { font-size: 11px; font-weight: 600; color: #333; }
+.backlog-eta { font-size: 9px; color: #888; margin-top: 1px; }
+.backlog-unblocks {
+  font-size: 8px; font-weight: 700; color: #6366f1; background: #eef2ff;
+  padding: 1px 6px; border-radius: 8px; flex-shrink: 0;
+}
+.backlog-bar-wrap {
+  width: 50px; height: 4px; background: #e5e7eb; border-radius: 2px; overflow: hidden; flex-shrink: 0;
+}
+.backlog-bar {
+  height: 100%; border-radius: 2px; background: #6366f1;
+}
+
+/* Create project form */
+.proj-form { padding: 0; }
+.proj-form .form-group { margin-bottom: 10px; }
+.proj-form label {
+  display: block; font-size: 8px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.8px; color: #999; margin-bottom: 3px;
+}
+.proj-form input[type="text"], .proj-form textarea {
+  width: 100%; padding: 6px 8px; border: 1.5px solid #ddd; border-radius: 5px;
+  font-size: 10px; font-family: inherit; color: #333; background: #fafafa;
+  transition: border-color 0.15s;
+}
+.proj-form input:focus, .proj-form textarea:focus { outline: none; border-color: #6366f1; background: #fff; }
+.proj-form textarea { resize: vertical; min-height: 50px; }
+.type-toggle { display: flex; gap: 4px; }
+.type-toggle-btn {
+  padding: 4px 10px; border: 1.5px solid #ddd; border-radius: 5px;
+  font-size: 9px; font-weight: 700; cursor: pointer; background: #fff; color: #666;
+  transition: all 0.15s;
+}
+.type-toggle-btn.active { border-color: #6366f1; background: #eef2ff; color: #4f46e5; }
+.wf-entry { display: flex; gap: 4px; align-items: center; margin-bottom: 4px; }
+.wf-entry input { flex: 1; }
+.wf-remove-btn {
+  background: none; border: none; color: #dc2626; cursor: pointer; font-size: 14px;
+  padding: 0 4px; font-weight: 700;
+}
+.add-wf-btn {
+  padding: 3px 8px; border: 1px dashed #ccc; border-radius: 4px;
+  background: none; cursor: pointer; font-size: 9px; color: #888; font-weight: 600;
+}
+.add-wf-btn:hover { border-color: #6366f1; color: #6366f1; }
+.selected-fields-list { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 4px; }
+.sel-field-pill {
+  display: inline-flex; align-items: center; gap: 3px;
+  padding: 2px 6px; border-radius: 4px; font-size: 8px; font-weight: 600;
+  background: #eef2ff; color: #4f46e5; border: 1px solid #c7d2fe;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+}
+.sel-field-pill .pill-x {
+  cursor: pointer; font-weight: 800; color: #818cf8; margin-left: 2px;
+}
+.sel-field-pill .pill-x:hover { color: #dc2626; }
+.form-auto-sources {
+  font-size: 9px; color: #555; margin-top: 4px; line-height: 1.6;
+}
+.form-btns { display: flex; gap: 6px; margin-top: 10px; }
+.btn-save, .btn-cancel {
+  padding: 5px 14px; border-radius: 5px; font-size: 10px; font-weight: 700;
+  cursor: pointer; border: none; transition: all 0.15s;
+}
+.btn-save { background: #6366f1; color: #fff; }
+.btn-save:hover { background: #4f46e5; }
+.btn-cancel { background: #f3f4f6; color: #666; }
+.btn-cancel:hover { background: #e5e7eb; }
+
+/* Project card clickable hint */
+.proj-header { cursor: pointer; }
+.proj-header:hover .proj-open-hint { color: #6366f1; }
+
+/* SVG overlay */
+svg.lines { position: absolute; top: 0; left: 0; pointer-events: none; z-index: 10; }
+
+/* Hover dimming */
+.pipeline.hov .src-item { opacity: 0.1; }
+.pipeline.hov .sg-header { opacity: 0.25; }
+.pipeline.hov .field { opacity: 0.1; }
+.pipeline.hov .proj-box { opacity: 0.2; }
+.pipeline.hov .lake-box { opacity: 0.35; }
+.pipeline.hov .src-item.hl { opacity: 1; }
+.pipeline.hov .sg-header.hl { opacity: 1; }
+.pipeline.hov .field.hl { opacity: 1; transform: scale(1.08); z-index: 2; position: relative; }
+.pipeline.hov .field.hl.selected { box-shadow: 0 0 0 2.5px #6366f1; }
+.pipeline.hov .proj-box.hl { opacity: 1; }
+.pipeline.hov .lake-box.hl { opacity: 1; box-shadow: 0 0 20px rgba(21,101,192,0.4); }
+
+/* Insights panel (bottom bar) */
+.insights-bar {
+  display: none; background: #1e293b; color: #f8fafc; padding: 10px 24px;
+  font-size: 10px; line-height: 1.6;
+  border-top: 2px solid #334155;
+}
+.insights-bar.open { display: flex; gap: 24px; flex-wrap: wrap; align-items: center; }
+.insight-stat {
+  display: flex; align-items: center; gap: 6px;
+}
+.insight-num { font-size: 18px; font-weight: 800; color: #818cf8; }
+.insight-label { font-size: 9px; color: #94a3b8; line-height: 1.3; }
+
+/* Legend bar */
+.legend-bar {
+  display: none; padding: 6px 24px; background: #f8fafc; border-bottom: 1px solid #e5e7eb;
+  font-size: 8px; color: #666; gap: 16px; align-items: center;
+}
+.legend-bar.open { display: flex; flex-wrap: wrap; }
+.legend-item { display: flex; align-items: center; gap: 4px; }
+.legend-dot {
+  width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+}
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>Meroka Data Architecture</h1>
+  <p class="subtitle">Practice Intelligence Pipeline &mdash; every field traced to its data source</p>
+  <div class="status-controls">
+    <button class="status-btn" id="btn-completed" onclick="toggleCompleted()">Completed</button>
+    <button class="status-btn" id="btn-backlog" onclick="toggleBacklog()">Backlog</button>
+    <button class="status-btn" id="btn-heatmap" onclick="toggleHeatmap()">Heatmap</button>
+    <button class="status-btn" id="btn-risk" onclick="toggleRisk()">Risk</button>
+    <button class="status-btn" id="btn-impact" onclick="toggleImpact()">Impact</button>
+  </div>
+</div>
+
+<!-- Legend bar (shows contextual legend for active modes) -->
+<div class="legend-bar" id="legend-bar"></div>
+
+<!-- Backlog overlay -->
+<div class="backlog-overlay" id="backlog-overlay" onclick="closeBacklog(event)">
+  <div class="backlog-panel" id="backlog-panel">
+    <div class="backlog-header">
+      <span class="backlog-title">Integration Backlog</span>
+      <button class="backlog-close" onclick="closeBacklog()">&times;</button>
+    </div>
+    <div class="backlog-list" id="backlog-list"></div>
+  </div>
+</div>
+
+<!-- Project detail overlay -->
+<div class="detail-overlay" id="detail-overlay">
+  <div class="detail-panel" id="detail-panel"></div>
+</div>
+
+<div class="pipe-wrap" id="wrap">
+<svg class="lines" id="svg"></svg>
+<div class="pipeline" id="pipeline">
+
+<!-- ===== SOURCES ===== -->
+<div class="stage sources-stage">
+  <div class="stage-label">Data Sources</div>
+
+  <div class="source-group sg-gov">
+    <div class="sg-header">Government &amp; Registry</div>
+    <div class="src-item" data-id="nppes" data-effort="low"><span class="sn">NPPES</span><span class="src-status-badge">&#10003;</span><span class="src-effort effort-low"></span><span class="sm m-csv">CSV</span></div>
+    <div class="src-item" data-id="pecos" data-effort="low"><span class="sn">CMS PECOS</span><span class="src-status-badge">&#10003;</span><span class="src-effort effort-low"></span><span class="sm m-csv">CSV</span></div>
+    <div class="src-item" data-id="pos" data-effort="low"><span class="sn">CMS Provider of Services</span><span class="src-status-badge">&#10003;</span><span class="src-effort effort-low"></span><span class="sm m-csv">CSV</span></div>
+    <div class="src-item" data-id="hrsa" data-effort="med"><span class="sn">HRSA FQHC</span><span class="src-status-badge">&#10003;</span><span class="src-effort effort-med"></span><span class="sm m-api">API</span></div>
+  </div>
+
+  <div class="source-group sg-cost">
+    <div class="sg-header">Cost &amp; Utilization</div>
+    <div class="src-item" data-id="medicare_util" data-effort="med"><span class="sn">Medicare Util &amp; Payment</span><span class="src-status-badge">&#10003;</span><span class="src-effort effort-med"></span><span class="sm m-api">API</span></div>
+    <div class="src-item" data-id="tic" data-effort="med"><span class="sn">TiC Files</span><span class="src-status-badge">&#10003;</span><span class="src-effort effort-med"></span><span class="sm m-json">JSON</span></div>
+    <div class="src-item" data-id="fair_health" data-effort="high"><span class="sn">FAIR Health</span><span class="src-status-badge">&#10003;</span><span class="src-effort effort-high"></span><span class="sm m-api">API</span></div>
+    <div class="src-item" data-id="meps" data-effort="low"><span class="sn">MEPS</span><span class="src-status-badge">&#10003;</span><span class="src-effort effort-low"></span><span class="sm m-csv">CSV</span></div>
+    <div class="src-item" data-id="rand" data-effort="high"><span class="sn">RAND / Sage</span><span class="src-status-badge">&#10003;</span><span class="src-effort effort-high"></span><span class="sm m-api">API</span></div>
+  </div>
+
+  <div class="source-group sg-quality">
+    <div class="sg-header">Quality &amp; Safety</div>
+    <div class="src-item" data-id="mips" data-effort="med"><span class="sn">MIPS / QPP</span><span class="src-status-badge">&#10003;</span><span class="src-effort effort-med"></span><span class="sm m-api">API</span></div>
+    <div class="src-item" data-id="care_compare" data-effort="med"><span class="sn">CMS Care Compare</span><span class="src-status-badge">&#10003;</span><span class="src-effort effort-med"></span><span class="sm m-api">API</span></div>
+    <div class="src-item" data-id="leapfrog" data-effort="high"><span class="sn">Leapfrog Safety</span><span class="src-status-badge">&#10003;</span><span class="src-effort effort-high"></span><span class="sm m-scraper">SCRAPER</span></div>
+    <div class="src-item" data-id="med_boards" data-effort="high"><span class="sn">State Medical Boards</span><span class="src-status-badge">&#10003;</span><span class="src-effort effort-high"></span><span class="sm m-scraper">SCRAPER</span></div>
+  </div>
+
+  <div class="source-group sg-web">
+    <div class="sg-header">Web &amp; Public</div>
+    <div class="src-item" data-id="website" data-effort="high"><span class="sn">Practice Websites</span><span class="src-status-badge">&#10003;</span><span class="src-effort effort-high"></span><span class="sm m-scraper">SCRAPER</span></div>
+    <div class="src-item" data-id="google" data-effort="med"><span class="sn">Google Business</span><span class="src-status-badge">&#10003;</span><span class="src-effort effort-med"></span><span class="sm m-api">API</span></div>
+    <div class="src-item" data-id="healthgrades" data-effort="high"><span class="sn">Healthgrades / Vitals</span><span class="src-status-badge">&#10003;</span><span class="src-effort effort-high"></span><span class="sm m-scraper">SCRAPER</span></div>
+    <div class="src-item" data-id="linkedin" data-effort="vhigh"><span class="sn">LinkedIn</span><span class="src-status-badge">&#10003;</span><span class="src-effort effort-vhigh"></span><span class="sm m-scraper">SCRAPER</span></div>
+    <div class="src-item" data-id="sos" data-effort="high"><span class="sn">SEC / State SoS</span><span class="src-status-badge">&#10003;</span><span class="src-effort effort-high"></span><span class="sm m-scraper">SCRAPER</span></div>
+  </div>
+
+  <div class="source-group sg-employer">
+    <div class="sg-header">Employer &amp; Market</div>
+    <div class="src-item" data-id="form5500" data-effort="low"><span class="sn">DOL Form 5500</span><span class="src-status-badge">&#10003;</span><span class="src-effort effort-low"></span><span class="sm m-csv">CSV</span></div>
+    <div class="src-item" data-id="gao" data-effort="high"><span class="sn">GAO Market Conc.</span><span class="src-status-badge">&#10003;</span><span class="src-effort effort-high"></span><span class="sm m-scraper">SCRAPER</span></div>
+  </div>
+
+  <div class="source-group sg-ai">
+    <div class="sg-header">AI &amp; Derived</div>
+    <div class="src-item" data-id="ai_classifier" data-effort="vhigh"><span class="sn">AI Independence Classifier</span><span class="src-status-badge">&#10003;</span><span class="src-effort effort-vhigh"></span><span class="sm m-agent">AI</span></div>
+    <div class="src-item" data-id="pe_list" data-effort="low"><span class="sn">Known PE Platforms</span><span class="src-status-badge">&#10003;</span><span class="src-effort effort-low"></span><span class="sm m-curated">CURATED</span></div>
+    <div class="src-item" data-id="derived" data-effort="med"><span class="sn">Derived / Calculated</span><span class="src-status-badge">&#10003;</span><span class="src-effort effort-med"></span><span class="sm m-derived">DERIVED</span></div>
+  </div>
+</div>
+
+<!-- Arrow -->
+<div class="flow-arrow"><span class="arr">›</span></div>
+
+<!-- ===== DATA LAKE ===== -->
+<div class="stage lake-stage">
+  <div class="stage-label">Ingestion</div>
+  <div class="lake-box" id="lake">
+    <div class="lake-title">Data<br>Lake</div>
+    <div class="lake-fmt">CSV</div>
+    <div class="lake-fmt">JSON</div>
+    <div class="lake-fmt">API</div>
+    <div class="lake-fmt">Scraper</div>
+    <div class="lake-fmt">AI Agent</div>
+  </div>
+</div>
+
+<!-- Arrow -->
+<div class="flow-arrow"><span class="arr">›</span></div>
+
+<!-- ===== DATA WAREHOUSE ===== -->
+<div class="stage warehouse-stage">
+  <div class="stage-label">Practice Intelligence Record</div>
+  <div class="wh-box" id="warehouse">
+    <div class="fsec">
+      <div class="fsec-label">Identity</div>
+      <div class="frow">
+        <div class="field f-identity" data-name="practice_name" data-sources="nppes">practice_name<span class="heat-dot"></span><span class="risk-dot"></span><span class="field-tooltip"></span></div>
+        <div class="field f-identity" data-name="npi" data-sources="nppes">npi<span class="heat-dot"></span><span class="risk-dot"></span><span class="field-tooltip"></span></div>
+        <div class="field f-identity" data-name="address" data-sources="nppes">address<span class="heat-dot"></span><span class="risk-dot"></span><span class="field-tooltip"></span></div>
+        <div class="field f-identity" data-name="phone" data-sources="nppes">phone<span class="heat-dot"></span><span class="risk-dot"></span><span class="field-tooltip"></span></div>
+        <div class="field f-identity" data-name="specialty" data-sources="nppes">specialty<span class="heat-dot"></span><span class="risk-dot"></span><span class="field-tooltip"></span></div>
+        <div class="field f-identity" data-name="taxonomy_code" data-sources="nppes">taxonomy_code<span class="heat-dot"></span><span class="risk-dot"></span><span class="field-tooltip"></span></div>
+        <div class="field f-identity" data-name="website_url" data-sources="website">website_url<span class="heat-dot"></span><span class="risk-dot"></span><span class="field-tooltip"></span></div>
+        <div class="field f-identity" data-name="legal_entity_name" data-sources="website,sos">legal_entity_name<span class="heat-dot"></span><span class="risk-dot"></span><span class="field-tooltip"></span></div>
+      </div>
+    </div>
+    <div class="fsec">
+      <div class="fsec-label">Roster</div>
+      <div class="frow">
+        <div class="field f-roster" data-name="providers" data-sources="nppes,pecos">providers[]<span class="heat-dot"></span><span class="risk-dot"></span><span class="field-tooltip"></span></div>
+        <div class="field f-roster" data-name="provider_count" data-sources="nppes,pecos">provider_count<span class="heat-dot"></span><span class="risk-dot"></span><span class="field-tooltip"></span></div>
+        <div class="field f-roster" data-name="credentials" data-sources="pecos">credentials<span class="heat-dot"></span><span class="risk-dot"></span><span class="field-tooltip"></span></div>
+        <div class="field f-roster" data-name="reassignment_org" data-sources="pecos">reassignment_org<span class="heat-dot"></span><span class="risk-dot"></span><span class="field-tooltip"></span></div>
+      </div>
+    </div>
+    <div class="fsec">
+      <div class="fsec-label">Independence</div>
+      <div class="frow">
+        <div class="field f-independence" data-name="ownership_type" data-sources="ai_classifier">ownership_type<span class="heat-dot"></span><span class="risk-dot"></span><span class="field-tooltip"></span></div>
+        <div class="field f-independence" data-name="parent_entity" data-sources="ai_classifier">parent_entity<span class="heat-dot"></span><span class="risk-dot"></span><span class="field-tooltip"></span></div>
+        <div class="field f-independence" data-name="independence_confidence" data-sources="ai_classifier">independence_confidence<span class="heat-dot"></span><span class="risk-dot"></span><span class="field-tooltip"></span></div>
+        <div class="field f-independence" data-name="pe_platform_match" data-sources="pe_list">pe_platform_match<span class="heat-dot"></span><span class="risk-dot"></span><span class="field-tooltip"></span></div>
+        <div class="field f-independence" data-name="facility_type_flag" data-sources="pos">facility_type_flag<span class="heat-dot"></span><span class="risk-dot"></span><span class="field-tooltip"></span></div>
+        <div class="field f-independence" data-name="fqhc_flag" data-sources="hrsa">fqhc_flag<span class="heat-dot"></span><span class="risk-dot"></span><span class="field-tooltip"></span></div>
+      </div>
+    </div>
+    <div class="fsec">
+      <div class="fsec-label">Technology</div>
+      <div class="frow">
+        <div class="field f-technology" data-name="ehr_system" data-sources="website">ehr_system<span class="heat-dot"></span><span class="risk-dot"></span><span class="field-tooltip"></span></div>
+        <div class="field f-technology" data-name="scheduling_platform" data-sources="website">scheduling_platform<span class="heat-dot"></span><span class="risk-dot"></span><span class="field-tooltip"></span></div>
+        <div class="field f-technology" data-name="telehealth_available" data-sources="website">telehealth_available<span class="heat-dot"></span><span class="risk-dot"></span><span class="field-tooltip"></span></div>
+        <div class="field f-technology" data-name="accepted_insurances" data-sources="website">accepted_insurances[]<span class="heat-dot"></span><span class="risk-dot"></span><span class="field-tooltip"></span></div>
+      </div>
+    </div>
+    <div class="fsec">
+      <div class="fsec-label">Services</div>
+      <div class="frow">
+        <div class="field f-services" data-name="cpt_codes" data-sources="medicare_util,tic">cpt_codes[]<span class="heat-dot"></span><span class="risk-dot"></span><span class="field-tooltip"></span></div>
+        <div class="field f-services" data-name="medicare_service_count" data-sources="medicare_util">medicare_service_count<span class="heat-dot"></span><span class="risk-dot"></span><span class="field-tooltip"></span></div>
+        <div class="field f-services" data-name="medicare_beneficiary_count" data-sources="medicare_util">medicare_beneficiary_count<span class="heat-dot"></span><span class="risk-dot"></span><span class="field-tooltip"></span></div>
+      </div>
+    </div>
+    <div class="fsec">
+      <div class="fsec-label">Revenue</div>
+      <div class="frow">
+        <div class="field f-revenue" data-name="medicare_volume_by_cpt" data-sources="medicare_util">medicare_volume_by_cpt<span class="heat-dot"></span><span class="risk-dot"></span><span class="field-tooltip"></span></div>
+        <div class="field f-revenue" data-name="medicare_allowed_amt" data-sources="medicare_util">medicare_allowed_amt<span class="heat-dot"></span><span class="risk-dot"></span><span class="field-tooltip"></span></div>
+        <div class="field f-revenue" data-name="commercial_rates_by_payer" data-sources="tic">commercial_rates_by_payer<span class="heat-dot"></span><span class="risk-dot"></span><span class="field-tooltip"></span></div>
+        <div class="field f-revenue" data-name="payer_mix_estimate" data-sources="meps">payer_mix_estimate<span class="heat-dot"></span><span class="risk-dot"></span><span class="field-tooltip"></span></div>
+        <div class="field f-revenue" data-name="est_annual_revenue" data-sources="derived">est_annual_revenue<span class="heat-dot"></span><span class="risk-dot"></span><span class="field-tooltip"></span></div>
+        <div class="field f-revenue" data-name="fair_health_benchmark" data-sources="fair_health">fair_health_benchmark<span class="heat-dot"></span><span class="risk-dot"></span><span class="field-tooltip"></span></div>
+      </div>
+    </div>
+    <div class="fsec">
+      <div class="fsec-label">Quality</div>
+      <div class="frow">
+        <div class="field f-quality" data-name="mips_quality_score" data-sources="mips">mips_quality_score<span class="heat-dot"></span><span class="risk-dot"></span><span class="field-tooltip"></span></div>
+        <div class="field f-quality" data-name="mips_cost_score" data-sources="mips">mips_cost_score<span class="heat-dot"></span><span class="risk-dot"></span><span class="field-tooltip"></span></div>
+        <div class="field f-quality" data-name="facility_quality" data-sources="care_compare">facility_quality<span class="heat-dot"></span><span class="risk-dot"></span><span class="field-tooltip"></span></div>
+        <div class="field f-quality" data-name="leapfrog_grade" data-sources="leapfrog">leapfrog_grade<span class="heat-dot"></span><span class="risk-dot"></span><span class="field-tooltip"></span></div>
+        <div class="field f-quality" data-name="hac_penalty_flag" data-sources="care_compare">hac_penalty_flag<span class="heat-dot"></span><span class="risk-dot"></span><span class="field-tooltip"></span></div>
+        <div class="field f-quality" data-name="board_certifications" data-sources="website,med_boards">board_certifications[]<span class="heat-dot"></span><span class="risk-dot"></span><span class="field-tooltip"></span></div>
+        <div class="field f-quality" data-name="accreditations" data-sources="website">accreditations[]<span class="heat-dot"></span><span class="risk-dot"></span><span class="field-tooltip"></span></div>
+        <div class="field f-quality" data-name="composite_quality_tier" data-sources="derived">composite_quality_tier<span class="heat-dot"></span><span class="risk-dot"></span><span class="field-tooltip"></span></div>
+      </div>
+    </div>
+    <div class="fsec">
+      <div class="fsec-label">Patient Satisfaction</div>
+      <div class="frow">
+        <div class="field f-satisfaction" data-name="google_rating" data-sources="google">google_rating<span class="heat-dot"></span><span class="risk-dot"></span><span class="field-tooltip"></span></div>
+        <div class="field f-satisfaction" data-name="review_count" data-sources="google">review_count<span class="heat-dot"></span><span class="risk-dot"></span><span class="field-tooltip"></span></div>
+        <div class="field f-satisfaction" data-name="review_sentiment" data-sources="google,ai_classifier">review_sentiment<span class="heat-dot"></span><span class="risk-dot"></span><span class="field-tooltip"></span></div>
+        <div class="field f-satisfaction" data-name="healthgrades_rating" data-sources="healthgrades">healthgrades_rating<span class="heat-dot"></span><span class="risk-dot"></span><span class="field-tooltip"></span></div>
+      </div>
+    </div>
+    <div class="fsec">
+      <div class="fsec-label">Market Comparison</div>
+      <div class="frow">
+        <div class="field f-comparison" data-name="cost_delta_vs_hospital" data-sources="derived">cost_delta_vs_hospital<span class="heat-dot"></span><span class="risk-dot"></span><span class="field-tooltip"></span></div>
+        <div class="field f-comparison" data-name="quality_delta" data-sources="derived">quality_delta<span class="heat-dot"></span><span class="risk-dot"></span><span class="field-tooltip"></span></div>
+        <div class="field f-comparison" data-name="regional_markup_pct" data-sources="rand">regional_markup_pct<span class="heat-dot"></span><span class="risk-dot"></span><span class="field-tooltip"></span></div>
+        <div class="field f-comparison" data-name="opportunity_score" data-sources="derived">opportunity_score<span class="heat-dot"></span><span class="risk-dot"></span><span class="field-tooltip"></span></div>
+      </div>
+    </div>
+    <div class="fsec">
+      <div class="fsec-label">Employer</div>
+      <div class="frow">
+        <div class="field f-employer" data-name="nearby_employers" data-sources="form5500">nearby_employers[]<span class="heat-dot"></span><span class="risk-dot"></span><span class="field-tooltip"></span></div>
+        <div class="field f-employer" data-name="employer_benefit_cost" data-sources="form5500">employer_benefit_cost<span class="heat-dot"></span><span class="risk-dot"></span><span class="field-tooltip"></span></div>
+        <div class="field f-employer" data-name="market_concentration" data-sources="gao">market_concentration<span class="heat-dot"></span><span class="risk-dot"></span><span class="field-tooltip"></span></div>
+        <div class="field f-employer" data-name="decision_makers" data-sources="linkedin">decision_makers[]<span class="heat-dot"></span><span class="risk-dot"></span><span class="field-tooltip"></span></div>
+        <div class="field f-employer" data-name="est_overpayment" data-sources="derived">est_overpayment<span class="heat-dot"></span><span class="risk-dot"></span><span class="field-tooltip"></span></div>
+        <div class="field f-employer" data-name="savings_pitch" data-sources="derived">savings_pitch<span class="heat-dot"></span><span class="risk-dot"></span><span class="field-tooltip"></span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Arrow -->
+<div class="flow-arrow"><span class="arr">›</span></div>
+
+<!-- ===== PROJECTS ===== -->
+<div class="stage projects-stage" id="projects-stage">
+  <div class="stage-label">Projects / Experiments</div>
+  <div id="projects-container"></div>
+</div>
+
+</div><!-- /pipeline -->
+</div><!-- /pipe-wrap -->
+
+<!-- Insights bar -->
+<div class="insights-bar" id="insights-bar"></div>
+
+<script>
+const wrap = document.getElementById('wrap');
+const pipeline = document.getElementById('pipeline');
+const svg = document.getElementById('svg');
+const lake = document.getElementById('lake');
+
+const SRC_COLORS = {
+  nppes:'#5c7cfa', pecos:'#5c7cfa', pos:'#5c7cfa', hrsa:'#5c7cfa',
+  medicare_util:'#37b24d', tic:'#37b24d', fair_health:'#37b24d', meps:'#37b24d', rand:'#37b24d',
+  mips:'#f59f00', care_compare:'#f59f00', leapfrog:'#f59f00', med_boards:'#f59f00',
+  website:'#e8590c', google:'#e8590c', healthgrades:'#e8590c', linkedin:'#e8590c', sos:'#e8590c',
+  form5500:'#ae3ec9', gao:'#ae3ec9',
+  ai_classifier:'#e03131', pe_list:'#868e96', derived:'#be4bdb'
+};
+
+// ── Data Model ──
+
+const COMPLETED_SOURCES = new Set([
+  'nppes','pecos','pos','medicare_util','mips','care_compare','hrsa','meps','pe_list','derived'
+]);
+
+const BACKLOG = [
+  { id:'tic', name:'TiC Files', eta:'Q2 2025' },
+  { id:'fair_health', name:'FAIR Health', eta:'Q2 2025' },
+  { id:'website', name:'Practice Websites', eta:'Q3 2025' },
+  { id:'google', name:'Google Business', eta:'Q3 2025' },
+  { id:'form5500', name:'DOL Form 5500', eta:'Q3 2025' },
+  { id:'ai_classifier', name:'AI Independence Classifier', eta:'Q4 2025' },
+  { id:'leapfrog', name:'Leapfrog Safety', eta:'Q4 2025' },
+  { id:'healthgrades', name:'Healthgrades', eta:'Q4 2025' },
+  { id:'linkedin', name:'LinkedIn', eta:'Q1 2026' },
+  { id:'sos', name:'SEC / State SoS', eta:'Q1 2026' },
+  { id:'med_boards', name:'State Medical Boards', eta:'Q1 2026' },
+  { id:'gao', name:'GAO Market Conc.', eta:'Q2 2026' },
+  { id:'rand', name:'RAND / Sage', eta:'Q2 2026' },
+];
+
+const ETA_ORDER = ['Q2 2025','Q3 2025','Q4 2025','Q1 2026','Q2 2026'];
+
+const PROJECTS = [
+  {
+    id: 'proj-dcm',
+    name: 'Direct Contracting Marketplace',
+    type: 'external',
+    shortDesc: 'Market-making platform enabling direct contracting between independent medical practices and self-insured employers — bypassing traditional insurance networks. Proves independent practices deliver equal or better care at lower cost, makes it transactable with standardized pricing, and runs AI agents for legal/admin scaffolding.',
+    objective: 'Meroka is a market-making platform that enables direct contracting between independent medical practices and self-insured employers — bypassing traditional insurance networks. The core thesis: independent practices deliver equal or better care at significantly lower cost than hospital-affiliated and PE-owned practices, but lack the infrastructure to contract directly with employers. Meroka provides that infrastructure by proving the gap (comprehensive cost/quality dataset), making it transactable (standardized pricing derived from data, automated legal scaffolding including CIN formation and direct employer contracts), and running AI agents that handle administrative work previously requiring teams of lawyers and RCM specialists.',
+    workflows: [
+      {
+        name: 'L1: Provider Map',
+        desc: 'Identify every independent practice, classify ownership via NPPES + PECOS + web scraping. Output: providers table + practice_profiles with independence classification.',
+        fields: ['practice_name','npi','address','phone','specialty','taxonomy_code','website_url','legal_entity_name','providers','provider_count','credentials','reassignment_org','ownership_type','parent_entity','independence_confidence','pe_platform_match','facility_type_flag','fqhc_flag','ehr_system','scheduling_platform','telehealth_available','accepted_insurances','board_certifications','accreditations']
+      },
+      {
+        name: 'L2: Services & Revenue',
+        desc: 'What each practice does, how much, and what they get paid — Medicare utilization + TiC negotiated rates from UHC, BCBS MA, Aetna. Target CPTs: office visits, MRI, arthroscopy, PT, joint injection, total joint replacement.',
+        fields: ['cpt_codes','medicare_service_count','medicare_beneficiary_count','medicare_volume_by_cpt','medicare_allowed_amt','commercial_rates_by_payer','payer_mix_estimate','est_annual_revenue','fair_health_benchmark']
+      },
+      {
+        name: 'L3: Quality Signals',
+        desc: 'Attach quality and patient satisfaction to each practice — MIPS scores, CMS Care Compare, Google Business ratings, state medical board license status.',
+        fields: ['mips_quality_score','mips_cost_score','facility_quality','leapfrog_grade','hac_penalty_flag','board_certifications','accreditations','composite_quality_tier','google_rating','review_count','review_sentiment','healthgrades_rating']
+      },
+      {
+        name: 'L4: Comparison Engine',
+        desc: 'Prove independents deliver equal or better care at lower cost. Segment by independence status, calculate avg negotiated rate, Medicare allowed, MIPS, Google rating per CPT. Generate headline stats for employer pitch.',
+        fields: ['ownership_type','independence_confidence','cost_delta_vs_hospital','quality_delta','regional_markup_pct','opportunity_score','commercial_rates_by_payer','medicare_allowed_amt','mips_quality_score','google_rating']
+      },
+      {
+        name: 'L5: Employer Contracting & Legal Agent',
+        desc: 'Given an employer and qualified independent practices, auto-generate CIN formation docs, direct employer-provider contracts with standardized pricing, TPA coordination memos, and DocuSign-ready approval bundles.',
+        fields: ['nearby_employers','employer_benefit_cost','market_concentration','decision_makers','est_overpayment','savings_pitch']
+      }
+    ],
+    get allFields() {
+      const s = new Set();
+      this.workflows.forEach(w => w.fields.forEach(f => s.add(f)));
+      return Array.from(s);
+    }
+  },
+  {
+    id: 'proj-malpha',
+    name: 'Malpha',
+    type: 'internal',
+    shortDesc: 'Coming soon',
+    objective: '',
+    workflows: [],
+    get allFields() { return []; }
+  }
+];
+
+const userProjects = [];
+
+function getAllProjects() { return [...PROJECTS, ...userProjects]; }
+
+function getSourcesForFields(fieldNames) {
+  const sources = new Set();
+  fieldNames.forEach(fname => {
+    const el = document.querySelector(`.field[data-name="${fname}"]`);
+    if (el) el.dataset.sources.split(',').forEach(s => sources.add(s.trim()));
+  });
+  return Array.from(sources);
+}
+
+function getMissingSources(sourceIds) {
+  return sourceIds.filter(s => !COMPLETED_SOURCES.has(s));
+}
+
+function getBacklogPosition(sourceId) {
+  const idx = BACKLOG.findIndex(b => b.id === sourceId);
+  return idx >= 0 ? idx + 1 : null;
+}
+
+function getBacklogEntry(sourceId) {
+  return BACKLOG.find(b => b.id === sourceId) || null;
+}
+
+// ── Analytics helpers ──
+
+function computeFieldUsage() {
+  // Returns map: fieldName -> { count, workflows: [{projName, wfName}] }
+  const usage = {};
+  document.querySelectorAll('.field').forEach(f => { usage[f.dataset.name] = { count: 0, workflows: [] }; });
+  getAllProjects().forEach(proj => {
+    proj.workflows.forEach(wf => {
+      wf.fields.forEach(fname => {
+        if (usage[fname]) {
+          usage[fname].count++;
+          usage[fname].workflows.push({ projName: proj.name, wfName: wf.name });
+        }
+      });
+    });
+  });
+  return usage;
+}
+
+function computeSourceBlastRadius(sid) {
+  // Returns { fields, workflows, projects } affected if source goes down
+  const fields = [];
+  document.querySelectorAll('.field').forEach(f => {
+    const srcs = f.dataset.sources.split(',').map(s => s.trim());
+    // Only a risk if this is the ONLY source
+    if (srcs.includes(sid)) fields.push(f.dataset.name);
+  });
+  const wfs = [];
+  const projs = new Set();
+  getAllProjects().forEach(proj => {
+    proj.workflows.forEach(wf => {
+      if (wf.fields.some(f => fields.includes(f))) {
+        wfs.push({ projName: proj.name, wfName: wf.name });
+        projs.add(proj.name);
+      }
+    });
+  });
+  return { fields, workflows: wfs, projects: Array.from(projs) };
+}
+
+function computeBacklogUnblocks() {
+  // For each backlog source, how many workflows need it
+  const map = {};
+  BACKLOG.forEach(b => { map[b.id] = 0; });
+  getAllProjects().forEach(proj => {
+    proj.workflows.forEach(wf => {
+      const wfSources = getSourcesForFields(wf.fields);
+      const missing = getMissingSources(wfSources);
+      missing.forEach(sid => {
+        if (map[sid] !== undefined) map[sid]++;
+      });
+    });
+  });
+  return map;
+}
+
+function getWorkflowReadiness(wf) {
+  const sources = getSourcesForFields(wf.fields);
+  if (sources.length === 0) return 'green';
+  const missing = getMissingSources(sources);
+  const pct = (sources.length - missing.length) / sources.length;
+  if (pct >= 1) return 'green';
+  if (pct >= 0.5) return 'yellow';
+  return 'red';
+}
+
+function getLatestETA(missingSources) {
+  let latest = null;
+  missingSources.forEach(sid => {
+    const entry = getBacklogEntry(sid);
+    if (entry) {
+      const idx = ETA_ORDER.indexOf(entry.eta);
+      if (idx >= 0 && (latest === null || idx > latest)) latest = idx;
+    }
+  });
+  return latest !== null ? ETA_ORDER[latest] : null;
+}
+
+function getUnusedFields() {
+  const usage = computeFieldUsage();
+  return Object.keys(usage).filter(f => usage[f].count === 0);
+}
+
+// ── Render field annotations ──
+
+function applyFieldAnnotations() {
+  const usage = computeFieldUsage();
+
+  document.querySelectorAll('.field').forEach(f => {
+    const name = f.dataset.name;
+    const u = usage[name] || { count: 0, workflows: [] };
+    const srcs = f.dataset.sources.split(',').map(s => s.trim());
+
+    // Heat dot
+    const heatDot = f.querySelector('.heat-dot');
+    const heatLevel = Math.min(u.count, 4);
+    heatDot.className = `heat-dot heat-${heatLevel}`;
+    if (u.count === 0) f.classList.add('heat-unused');
+    else f.classList.remove('heat-unused');
+
+    // Risk classification
+    if (srcs.length === 1) {
+      f.classList.add('single-source');
+      f.classList.remove('multi-source');
+    } else {
+      f.classList.remove('single-source');
+      f.classList.add('multi-source');
+    }
+
+    // Tooltip content
+    const tooltip = f.querySelector('.field-tooltip');
+    let tip = '';
+    if (u.count > 0) {
+      tip += `<strong>Used in ${u.count} workflow${u.count > 1 ? 's' : ''}:</strong><br>`;
+      // Group by project
+      const byProj = {};
+      u.workflows.forEach(w => {
+        if (!byProj[w.projName]) byProj[w.projName] = [];
+        byProj[w.projName].push(w.wfName);
+      });
+      Object.entries(byProj).forEach(([pn, wfs]) => {
+        tip += `${pn}: ${wfs.join(', ')}<br>`;
+      });
+    } else {
+      tip += '<strong>Unused</strong> — no project references this field';
+    }
+    tip += `<br>Sources: ${srcs.join(', ')}`;
+    if (srcs.length === 1) tip += '<br><span style="color:#fca5a5">Single-source risk</span>';
+    tooltip.innerHTML = tip;
+  });
+}
+
+// ── Render Projects ──
+
+function renderProjects() {
+  const container = document.getElementById('projects-container');
+  container.innerHTML = '';
+
+  const all = getAllProjects();
+  all.forEach(proj => {
+    container.appendChild(createProjectCard(proj));
+  });
+
+  const placeholder = document.createElement('div');
+  placeholder.className = 'proj-box proj-placeholder';
+  placeholder.id = 'new-project-trigger';
+  placeholder.style.cssText = 'border-color:#e0e0e0; cursor:pointer;';
+  placeholder.innerHTML = '<div class="proj-name" style="color:#ccc;">+ New Project</div><div class="proj-desc" style="color:#ddd; font-style:italic;">Define fields &amp; sources</div>';
+  placeholder.addEventListener('click', openCreateForm);
+  container.appendChild(placeholder);
+
+  reattachProjectHovers();
+  applyFieldAnnotations();
+  updateInsightsBar();
+  setTimeout(drawAllLines, 50);
+}
+
+function createProjectCard(proj) {
+  const box = document.createElement('div');
+  box.className = 'proj-box';
+  box.id = proj.id;
+  box.dataset.fields = proj.allFields.join(',');
+  box.dataset.type = proj.type;
+  box.dataset.projId = proj.id;
+
+  const fields = proj.allFields;
+  const sources = getSourcesForFields(fields);
+  const integrated = sources.length - getMissingSources(sources).length;
+  const pct = sources.length > 0 ? Math.round((integrated / sources.length) * 100) : 0;
+
+  const header = document.createElement('div');
+  header.className = 'proj-header';
+  header.innerHTML = `
+    <div style="flex:1">
+      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+        <span class="proj-name" style="margin-bottom:0">${proj.name}</span>
+        <span class="proj-type-badge ${proj.type}">${proj.type}</span>
+      </div>
+      <div class="proj-desc" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">${proj.shortDesc}</div>
+      <div class="proj-meta">${fields.length} fields · ${sources.length} sources · ${pct}% ready</div>
+    </div>
+    <span class="proj-open-hint" style="font-size:16px;color:#ccc;flex-shrink:0;">&#8599;</span>
+  `;
+
+  box.appendChild(header);
+
+  header.addEventListener('click', (e) => {
+    e.stopPropagation();
+    openDetailPanel(proj);
+  });
+
+  return box;
+}
+
+// ── Detail Panel ──
+
+let detailPanelOpen = false;
+
+function openDetailPanel(proj) {
+  const overlay = document.getElementById('detail-overlay');
+  const panel = document.getElementById('detail-panel');
+  detailPanelOpen = true;
+
+  const fields = proj.allFields;
+  const sources = getSourcesForFields(fields);
+  const missing = getMissingSources(sources);
+  const integrated = sources.length - missing.length;
+  const pct = sources.length > 0 ? Math.round((integrated / sources.length) * 100) : 0;
+
+  let html = '';
+
+  // Header
+  html += `<div class="detail-panel-header">
+    <div class="detail-panel-header-info">
+      <div class="detail-panel-title">
+        ${proj.name}
+        <span class="proj-type-badge ${proj.type}">${proj.type}</span>
+      </div>
+      <div class="detail-panel-desc">${proj.shortDesc}</div>
+      <div class="detail-panel-meta">${fields.length} fields · ${sources.length} sources · ${pct}% data ready</div>
+    </div>
+    <button class="detail-close" onclick="closeDetailPanel()">&times;</button>
+  </div>`;
+
+  // Body
+  html += '<div class="detail-panel-body">';
+
+  if (proj.objective) {
+    html += '<div class="proj-section-title">Objective</div>';
+    html += `<div class="proj-objective">${proj.objective}</div>`;
+  }
+
+  if (proj.workflows.length > 0) {
+    html += '<div class="proj-section-title">Workflows</div>';
+    proj.workflows.forEach((wf, i) => {
+      const readiness = getWorkflowReadiness(wf);
+      const dotClass = readiness === 'green' ? 'wf-dot-green' : readiness === 'yellow' ? 'wf-dot-yellow' : 'wf-dot-red';
+      const descHtml = wf.desc ? `<div class="wf-desc">${wf.desc}</div>` : '';
+      html += `<div class="wf-item" data-wf-fields="${wf.fields.join(',')}" data-proj-id="${proj.id}">
+        <div class="wf-status-dot ${dotClass}" title="${readiness === 'green' ? 'All sources ready' : readiness === 'yellow' ? 'Some sources missing' : 'Most sources missing'}"></div>
+        <div class="wf-content">
+          <div><span class="wf-number">${i + 1}.</span><span class="wf-name">${wf.name}</span></div>
+          ${descHtml}
+          <div class="wf-fields-list">${wf.fields.join(', ')}</div>
+        </div>
+      </div>`;
+    });
+  }
+
+  // Data readiness + timeline
+  if (fields.length > 0) {
+    html += '<div class="proj-section-title">Data Readiness</div>';
+    html += '<div class="data-readiness">';
+    html += `<div class="readiness-text">${integrated} of ${sources.length} sources integrated (${pct}%)</div>`;
+    html += `<div class="readiness-bar-wrap"><div class="readiness-bar" style="width:${pct}%"></div></div>`;
+
+    if (missing.length > 0) {
+      const latestEta = getLatestETA(missing);
+      if (latestEta) {
+        const etaIdx = ETA_ORDER.indexOf(latestEta);
+        const totalSteps = ETA_ORDER.length;
+        const doneWidth = pct;
+        const pendingWidth = Math.round(((etaIdx + 1) / totalSteps) * (100 - pct));
+        html += '<div class="proj-timeline">';
+        html += `<div class="readiness-text" style="margin-bottom:2px">Projected completion: <strong>${latestEta}</strong></div>`;
+        html += '<div class="timeline-bar-wrap">';
+        html += `<div class="timeline-segment timeline-done" style="width:${doneWidth}%"></div>`;
+        html += `<div class="timeline-segment timeline-pending" style="left:${doneWidth}%;width:${pendingWidth}%"></div>`;
+        html += '</div>';
+        html += '<div class="timeline-labels"><span class="timeline-label">Now</span><span class="timeline-label">' + latestEta + '</span></div>';
+        html += '</div>';
+      }
+
+      html += '<div style="margin-top:6px">';
+      missing.forEach(sid => {
+        const pos = getBacklogPosition(sid);
+        const entry = getBacklogEntry(sid);
+        const label = entry ? entry.name : sid;
+        const eta = entry ? `, ETA ${entry.eta}` : '';
+        const posLabel = pos ? `#${pos} in backlog` : 'not scheduled';
+        html += `<span class="missing-src"><span class="mpos">${label}</span> — ${posLabel}${eta}</span> `;
+      });
+      html += '</div>';
+    }
+    html += '</div>';
+  }
+
+  // Untapped fields
+  if (proj.workflows.length > 0) {
+    const allWarehouseFields = Array.from(document.querySelectorAll('.field')).map(f => f.dataset.name);
+    const projFieldSet = new Set(proj.allFields);
+    const unused = allWarehouseFields.filter(f => !projFieldSet.has(f));
+    if (unused.length > 0 && unused.length < allWarehouseFields.length) {
+      html += '<div class="proj-section-title">Untapped Fields <span style="font-weight:400;text-transform:none;letter-spacing:0;color:#aaa;">(' + unused.length + ' available)</span></div>';
+      html += '<div style="max-height:80px;overflow-y:auto;">';
+      unused.forEach(f => { html += `<span class="gap-field gap-unused">${f}</span> `; });
+      html += '</div>';
+    }
+  }
+
+  html += '</div>';
+  panel.innerHTML = html;
+  overlay.classList.add('open');
+
+  // Attach workflow hovers inside the panel
+  panel.querySelectorAll('.wf-item').forEach(wf => {
+    wf.addEventListener('mouseenter', (e) => {
+      e.stopPropagation();
+      const fieldNames = wf.dataset.wfFields.split(',').map(s => s.trim());
+      dimAll();
+      // Highlight the card in the pipeline
+      const projBox = document.getElementById(proj.id);
+      if (projBox) projBox.classList.add('hl');
+      lake.classList.add('hl');
+      const allSrc = new Set();
+      fieldNames.forEach(fname => {
+        const fel = document.querySelector(`.field[data-name="${fname}"]`);
+        if (fel) { fel.classList.add('hl'); fel.dataset.sources.split(',').forEach(s => allSrc.add(s.trim())); }
+      });
+      allSrc.forEach(hlSource);
+      hlLines(fieldNames, true);
+    });
+    wf.addEventListener('mouseleave', () => { resetAll(); });
+  });
+
+  // Click overlay background to close
+  overlay.onclick = (e) => {
+    if (e.target === overlay) closeDetailPanel();
+  };
+}
+
+function closeDetailPanel() {
+  document.getElementById('detail-overlay').classList.remove('open');
+  detailPanelOpen = false;
+  resetAll();
+}
+
+// ── Workflow hover (handled inside openDetailPanel) ──
+
+// ── Project hover ──
+
+function reattachProjectHovers() {
+  document.querySelectorAll('.proj-box[data-fields]').forEach(p => {
+    p.addEventListener('mouseenter', () => {
+      if (impactLocked) return;
+      const fieldNames = p.dataset.fields.split(',').map(s => s.trim()).filter(Boolean);
+      if (fieldNames.length === 0) return;
+      dimAll();
+      p.classList.add('hl');
+      lake.classList.add('hl');
+      const allSources = new Set();
+      fieldNames.forEach(fname => {
+        const fel = document.querySelector(`.field[data-name="${fname}"]`);
+        if (fel) {
+          fel.classList.add('hl');
+          fel.dataset.sources.split(',').forEach(s => allSources.add(s.trim()));
+        }
+      });
+      allSources.forEach(hlSource);
+      hlLines(fieldNames, false);
+    });
+    p.addEventListener('mouseleave', () => { if (!impactLocked) resetAll(); });
+  });
+}
+
+// ── Status Controls ──
+
+function toggleCompleted() {
+  const btn = document.getElementById('btn-completed');
+  btn.classList.toggle('active');
+  pipeline.classList.toggle('show-status');
+}
+
+function applyCompletedStatus() {
+  document.querySelectorAll('.src-item').forEach(item => {
+    if (COMPLETED_SOURCES.has(item.dataset.id)) {
+      item.classList.add('src-completed');
+    }
+  });
+}
+
+// ── Heatmap ──
+
+function toggleHeatmap() {
+  const btn = document.getElementById('btn-heatmap');
+  btn.classList.toggle('active-blue');
+  pipeline.classList.toggle('show-heatmap');
+  updateLegend();
+}
+
+// ── Risk ──
+
+function toggleRisk() {
+  const btn = document.getElementById('btn-risk');
+  btn.classList.toggle('active-amber');
+  pipeline.classList.toggle('show-risk');
+  updateLegend();
+}
+
+// ── Impact mode ──
+
+let impactMode = false;
+let impactLocked = false;
+let lockedSourceId = null;
+
+function toggleImpact() {
+  const btn = document.getElementById('btn-impact');
+  impactMode = !impactMode;
+  btn.classList.toggle('active-red', impactMode);
+  pipeline.classList.toggle('impact-mode', impactMode);
+
+  if (!impactMode) {
+    clearImpactLock();
+  }
+  updateLegend();
+}
+
+function clearImpactLock() {
+  impactLocked = false;
+  lockedSourceId = null;
+  document.querySelectorAll('.impact-locked').forEach(el => el.classList.remove('impact-locked'));
+  resetAll();
+  updateInsightsBar();
+}
+
+function handleImpactClick(e) {
+  if (!impactMode) return;
+  const srcItem = e.currentTarget;
+  const sid = srcItem.dataset.id;
+
+  if (lockedSourceId === sid) {
+    clearImpactLock();
+    return;
+  }
+
+  clearImpactLock();
+  impactLocked = true;
+  lockedSourceId = sid;
+  srcItem.classList.add('impact-locked');
+
+  const blast = computeSourceBlastRadius(sid);
+
+  dimAll();
+  srcItem.classList.add('hl');
+  srcItem.closest('.source-group').querySelector('.sg-header').classList.add('hl');
+  lake.classList.add('hl');
+
+  blast.fields.forEach(fname => {
+    const fel = document.querySelector(`.field[data-name="${fname}"]`);
+    if (fel) fel.classList.add('hl');
+  });
+  hlLines(blast.fields, true);
+
+  document.querySelectorAll('.proj-box[data-fields]').forEach(p => {
+    const pf = p.dataset.fields.split(',').map(x => x.trim());
+    if (blast.fields.some(f => pf.includes(f))) p.classList.add('hl');
+  });
+
+  // Show blast radius in insights bar
+  const bar = document.getElementById('insights-bar');
+  const srcName = srcItem.querySelector('.sn').textContent;
+  bar.innerHTML = `
+    <div class="insight-stat"><span class="insight-num" style="color:#ef4444">${srcName}</span><span class="insight-label">Blast Radius</span></div>
+    <div class="insight-stat"><span class="insight-num">${blast.fields.length}</span><span class="insight-label">fields<br>affected</span></div>
+    <div class="insight-stat"><span class="insight-num">${blast.workflows.length}</span><span class="insight-label">workflows<br>affected</span></div>
+    <div class="insight-stat"><span class="insight-num">${blast.projects.length}</span><span class="insight-label">projects<br>affected</span></div>
+    <div style="font-size:9px;color:#94a3b8;margin-left:auto;">Click source again to deselect</div>
+  `;
+  bar.classList.add('open');
+}
+
+// ── Backlog Panel ──
+
+function renderBacklog() {
+  const unblocks = computeBacklogUnblocks();
+  const list = document.getElementById('backlog-list');
+  let html = '';
+  BACKLOG.forEach((item, i) => {
+    const progress = Math.max(5, Math.min(95, ((BACKLOG.length - i) / BACKLOG.length) * 80 + 10));
+    const ub = unblocks[item.id] || 0;
+    html += `<div class="backlog-item">
+      <span class="backlog-rank">${i + 1}</span>
+      <div class="backlog-info">
+        <div class="backlog-name">${item.name}</div>
+        <div class="backlog-eta">ETA: ${item.eta}</div>
+      </div>
+      ${ub > 0 ? `<span class="backlog-unblocks">${ub} wf${ub > 1 ? 's' : ''}</span>` : ''}
+      <div class="backlog-bar-wrap"><div class="backlog-bar" style="width:${progress}%"></div></div>
+    </div>`;
+  });
+  list.innerHTML = html;
+}
+
+function toggleBacklog() {
+  const overlay = document.getElementById('backlog-overlay');
+  const btn = document.getElementById('btn-backlog');
+  if (overlay.classList.contains('open')) {
+    overlay.classList.remove('open');
+    btn.classList.remove('active');
+  } else {
+    renderBacklog();
+    overlay.classList.add('open');
+    btn.classList.add('active');
+  }
+}
+
+function closeBacklog(e) {
+  if (e && e.target !== document.getElementById('backlog-overlay')) return;
+  document.getElementById('backlog-overlay').classList.remove('open');
+  document.getElementById('btn-backlog').classList.remove('active');
+}
+
+// ── Insights bar ──
+
+function updateInsightsBar() {
+  if (impactLocked) return; // Don't overwrite impact display
+  const bar = document.getElementById('insights-bar');
+  const usage = computeFieldUsage();
+  const allFields = Object.keys(usage);
+  const usedFields = allFields.filter(f => usage[f].count > 0);
+  const unusedFields = allFields.filter(f => usage[f].count === 0);
+  const singleSourceFields = allFields.filter(f => {
+    const el = document.querySelector(`.field[data-name="${f}"]`);
+    return el && el.dataset.sources.split(',').length === 1;
+  });
+  const riskFieldsUsed = singleSourceFields.filter(f => usage[f].count > 0);
+
+  // Most used field
+  let topField = null, topCount = 0;
+  Object.entries(usage).forEach(([f, u]) => {
+    if (u.count > topCount) { topCount = u.count; topField = f; }
+  });
+
+  bar.innerHTML = `
+    <div class="insight-stat"><span class="insight-num">${usedFields.length}</span><span class="insight-label">fields<br>in use</span></div>
+    <div class="insight-stat"><span class="insight-num">${unusedFields.length}</span><span class="insight-label">unused<br>fields</span></div>
+    <div class="insight-stat"><span class="insight-num" style="color:#ef4444">${riskFieldsUsed.length}</span><span class="insight-label">single-source<br>risk fields</span></div>
+    <div class="insight-stat"><span class="insight-num" style="color:#fbbf24">${BACKLOG.length}</span><span class="insight-label">sources in<br>backlog</span></div>
+    ${topField ? `<div class="insight-stat"><span class="insight-num" style="color:#22c55e;font-size:12px;">${topField}</span><span class="insight-label">most used<br>(${topCount} workflows)</span></div>` : ''}
+  `;
+  bar.classList.add('open');
+}
+
+// ── Legend bar ──
+
+function updateLegend() {
+  const bar = document.getElementById('legend-bar');
+  let items = [];
+
+  if (pipeline.classList.contains('show-heatmap')) {
+    items.push('<span style="font-weight:700;margin-right:4px;">HEATMAP:</span>');
+    items.push('<div class="legend-item"><span class="legend-dot" style="background:#d1d5db"></span>Unused</div>');
+    items.push('<div class="legend-item"><span class="legend-dot" style="background:#93c5fd"></span>1 workflow</div>');
+    items.push('<div class="legend-item"><span class="legend-dot" style="background:#fbbf24"></span>2 workflows</div>');
+    items.push('<div class="legend-item"><span class="legend-dot" style="background:#fb923c"></span>3 workflows</div>');
+    items.push('<div class="legend-item"><span class="legend-dot" style="background:#ef4444"></span>4+ workflows</div>');
+  }
+  if (pipeline.classList.contains('show-risk')) {
+    if (items.length) items.push('<span style="margin:0 8px;color:#ccc;">|</span>');
+    items.push('<span style="font-weight:700;margin-right:4px;">RISK:</span>');
+    items.push('<div class="legend-item"><span class="legend-dot" style="background:#ef4444"></span>Single source</div>');
+    items.push('<div class="legend-item"><span class="legend-dot" style="background:#22c55e;border:1px solid #16a34a;"></span>Multi-source</div>');
+  }
+  if (pipeline.classList.contains('impact-mode')) {
+    if (items.length) items.push('<span style="margin:0 8px;color:#ccc;">|</span>');
+    items.push('<span style="font-weight:700;margin-right:4px;">IMPACT:</span>');
+    items.push('<div class="legend-item">Click any source to see its blast radius</div>');
+  }
+  if (pipeline.classList.contains('show-effort')) {
+    if (items.length) items.push('<span style="margin:0 8px;color:#ccc;">|</span>');
+    items.push('<span style="font-weight:700;margin-right:4px;">EFFORT:</span>');
+    items.push('<div class="legend-item"><span class="legend-dot effort-low"></span>Low</div>');
+    items.push('<div class="legend-item"><span class="legend-dot effort-med"></span>Medium</div>');
+    items.push('<div class="legend-item"><span class="legend-dot effort-high"></span>High</div>');
+    items.push('<div class="legend-item"><span class="legend-dot effort-vhigh"></span>Very High</div>');
+  }
+
+  if (items.length) {
+    bar.innerHTML = items.join('');
+    bar.classList.add('open');
+  } else {
+    bar.classList.remove('open');
+  }
+}
+
+// ── Create Project Form ──
+
+let formActive = false;
+let selectedFields = new Set();
+
+function openCreateForm() {
+  if (formActive) return;
+  formActive = true;
+  const trigger = document.getElementById('new-project-trigger');
+  trigger.className = 'proj-box';
+  trigger.style.cssText = '';
+  trigger.removeEventListener('click', openCreateForm);
+
+  trigger.innerHTML = `
+    <div class="proj-form">
+      <div class="form-group">
+        <label>Project Name</label>
+        <input type="text" id="form-name" placeholder="e.g. Provider Analytics">
+      </div>
+      <div class="form-group">
+        <label>Type</label>
+        <div class="type-toggle">
+          <button class="type-toggle-btn active" data-type="external" onclick="setFormType(this)">External</button>
+          <button class="type-toggle-btn" data-type="internal" onclick="setFormType(this)">Internal</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Objective</label>
+        <textarea id="form-objective" placeholder="Describe the project goal..."></textarea>
+      </div>
+      <div class="form-group">
+        <label>Workflows</label>
+        <div id="wf-entries"></div>
+        <button class="add-wf-btn" onclick="addWorkflowEntry()">+ Add Workflow</button>
+      </div>
+      <div class="form-group">
+        <label>Selected Fields <span style="font-weight:400;text-transform:none;letter-spacing:0">(click fields in warehouse)</span></label>
+        <div id="selected-fields-display" class="selected-fields-list"></div>
+      </div>
+      <div class="form-group">
+        <label>Auto-detected Sources</label>
+        <div id="form-sources" class="form-auto-sources" style="color:#aaa;">Select fields to see required sources</div>
+      </div>
+      <div class="form-btns">
+        <button class="btn-save" onclick="saveNewProject()">Save Project</button>
+        <button class="btn-cancel" onclick="cancelCreateForm()">Cancel</button>
+      </div>
+    </div>
+  `;
+
+  selectedFields = new Set();
+  addWorkflowEntry();
+  document.querySelectorAll('.field').forEach(f => f.classList.add('selectable'));
+  document.getElementById('warehouse').addEventListener('click', fieldPickerHandler);
+  setTimeout(drawAllLines, 50);
+}
+
+function fieldPickerHandler(e) {
+  const field = e.target.closest('.field');
+  if (!field || !formActive) return;
+  const name = field.dataset.name;
+  if (selectedFields.has(name)) { selectedFields.delete(name); field.classList.remove('selected'); }
+  else { selectedFields.add(name); field.classList.add('selected'); }
+  updateSelectedFieldsDisplay();
+  updateFormSources();
+}
+
+function updateSelectedFieldsDisplay() {
+  const container = document.getElementById('selected-fields-display');
+  if (!container) return;
+  if (selectedFields.size === 0) { container.innerHTML = '<span style="font-size:9px;color:#aaa;">None selected</span>'; return; }
+  container.innerHTML = Array.from(selectedFields).map(f =>
+    `<span class="sel-field-pill">${f}<span class="pill-x" onclick="removeFormField('${f}')">&times;</span></span>`
+  ).join('');
+}
+
+function removeFormField(fname) {
+  selectedFields.delete(fname);
+  const el = document.querySelector(`.field[data-name="${fname}"]`);
+  if (el) el.classList.remove('selected');
+  updateSelectedFieldsDisplay();
+  updateFormSources();
+}
+
+function updateFormSources() {
+  const container = document.getElementById('form-sources');
+  if (!container) return;
+  const fields = Array.from(selectedFields);
+  if (fields.length === 0) { container.innerHTML = '<span style="color:#aaa;">Select fields to see required sources</span>'; return; }
+  const sources = getSourcesForFields(fields);
+  const missing = getMissingSources(sources);
+  const integrated = sources.length - missing.length;
+  let html = `<strong>${integrated}/${sources.length}</strong> sources integrated`;
+  if (missing.length > 0) {
+    html += '<br>Missing: ';
+    html += missing.map(sid => {
+      const entry = getBacklogEntry(sid);
+      const pos = getBacklogPosition(sid);
+      const label = entry ? entry.name : sid;
+      const eta = entry ? ` ETA ${entry.eta}` : '';
+      const posStr = pos ? `#${pos}` : '?';
+      return `<span class="missing-src"><span class="mpos">${label}</span> — ${posStr}${eta}</span>`;
+    }).join(' ');
+  }
+  container.innerHTML = html;
+}
+
+function setFormType(btn) {
+  btn.parentElement.querySelectorAll('.type-toggle-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function addWorkflowEntry() {
+  const container = document.getElementById('wf-entries');
+  if (!container) return;
+  const idx = container.children.length + 1;
+  const div = document.createElement('div');
+  div.className = 'wf-entry';
+  div.innerHTML = `<input type="text" placeholder="Workflow ${idx} name"><button class="wf-remove-btn" onclick="this.parentElement.remove()">&times;</button>`;
+  container.appendChild(div);
+}
+
+function saveNewProject() {
+  const name = document.getElementById('form-name').value.trim();
+  if (!name) { document.getElementById('form-name').style.borderColor = '#dc2626'; return; }
+  const typeBtn = document.querySelector('.type-toggle-btn.active');
+  const type = typeBtn ? typeBtn.dataset.type : 'external';
+  const objective = document.getElementById('form-objective').value.trim();
+  const wfEntries = document.querySelectorAll('#wf-entries .wf-entry input');
+  const workflows = [];
+  wfEntries.forEach(input => {
+    const wfName = input.value.trim();
+    if (wfName) workflows.push({ name: wfName, fields: Array.from(selectedFields) });
+  });
+  const proj = {
+    id: 'proj-' + name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+    name, type,
+    shortDesc: objective.substring(0, 120) + (objective.length > 120 ? '...' : ''),
+    objective, workflows,
+    get allFields() { const s = new Set(); this.workflows.forEach(w => w.fields.forEach(f => s.add(f))); return Array.from(s); }
+  };
+  userProjects.push(proj);
+  exitFieldSelectionMode();
+  formActive = false;
+  renderProjects();
+}
+
+function cancelCreateForm() {
+  exitFieldSelectionMode();
+  formActive = false;
+  renderProjects();
+}
+
+function exitFieldSelectionMode() {
+  document.querySelectorAll('.field').forEach(f => f.classList.remove('selectable', 'selected'));
+  document.getElementById('warehouse').removeEventListener('click', fieldPickerHandler);
+  selectedFields = new Set();
+}
+
+// ── SVG Lines ──
+
+function drawAllLines() {
+  const wr = wrap.getBoundingClientRect();
+  svg.style.width = wrap.scrollWidth + 'px';
+  svg.style.height = wrap.scrollHeight + 'px';
+  svg.setAttribute('viewBox', `0 0 ${wrap.scrollWidth} ${wrap.scrollHeight}`);
+  svg.innerHTML = '';
+
+  document.querySelectorAll('.field').forEach(field => {
+    const sids = field.dataset.sources.split(',').map(s => s.trim());
+    const fRect = field.getBoundingClientRect();
+    const fx = fRect.left - wr.left + wrap.scrollLeft;
+    const fy = fRect.top - wr.top + wrap.scrollTop + fRect.height / 2;
+
+    sids.forEach(sid => {
+      const srcEl = document.querySelector(`.src-item[data-id="${sid}"]`);
+      if (!srcEl) return;
+      const sRect = srcEl.getBoundingClientRect();
+      const sx = sRect.right - wr.left + wrap.scrollLeft;
+      const sy = sRect.top - wr.top + wrap.scrollTop + sRect.height / 2;
+      const midX = (sx + fx) / 2;
+      const d = `M ${sx} ${sy} C ${midX} ${sy}, ${midX} ${fy}, ${fx} ${fy}`;
+      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      path.setAttribute('d', d);
+      path.setAttribute('stroke', SRC_COLORS[sid] || '#ccc');
+      path.setAttribute('stroke-width', '1');
+      path.setAttribute('fill', 'none');
+      path.setAttribute('opacity', '0.07');
+      path.dataset.source = sid;
+      path.dataset.field = field.dataset.name;
+      svg.appendChild(path);
+    });
+  });
+}
+
+// ── Hover helpers ──
+
+function dimAll() { pipeline.classList.add('hov'); }
+function resetAll() {
+  pipeline.classList.remove('hov');
+  document.querySelectorAll('.hl').forEach(el => el.classList.remove('hl'));
+  document.querySelectorAll('#svg path').forEach(p => {
+    p.setAttribute('opacity', '0.07');
+    p.setAttribute('stroke-width', '1');
+  });
+}
+
+function hlSource(sid) {
+  const el = document.querySelector(`.src-item[data-id="${sid}"]`);
+  if (el) { el.classList.add('hl'); el.closest('.source-group').querySelector('.sg-header').classList.add('hl'); }
+}
+
+function hlLines(fieldNames, thick) {
+  const fset = new Set(fieldNames);
+  document.querySelectorAll('#svg path').forEach(p => {
+    if (fset.has(p.dataset.field)) {
+      p.setAttribute('opacity', thick ? '0.55' : '0.45');
+      p.setAttribute('stroke-width', thick ? '2.2' : '1.6');
+    } else {
+      p.setAttribute('opacity', '0.02');
+    }
+  });
+}
+
+// ── Field hover ──
+
+document.querySelectorAll('.field').forEach(f => {
+  f.addEventListener('mouseenter', () => {
+    if (formActive || impactLocked) return;
+    dimAll();
+    f.classList.add('hl');
+    lake.classList.add('hl');
+    const sids = f.dataset.sources.split(',').map(s => s.trim());
+    sids.forEach(hlSource);
+    hlLines([f.dataset.name], true);
+    document.querySelectorAll('.proj-box[data-fields]').forEach(p => {
+      const pf = p.dataset.fields.split(',').map(s => s.trim());
+      if (pf.includes(f.dataset.name)) p.classList.add('hl');
+    });
+  });
+  f.addEventListener('mouseleave', () => { if (!formActive && !impactLocked) resetAll(); });
+});
+
+// ── Source hover & click ──
+
+document.querySelectorAll('.src-item').forEach(s => {
+  s.addEventListener('mouseenter', () => {
+    if (impactLocked) return;
+    const sid = s.dataset.id;
+    dimAll();
+    s.classList.add('hl');
+    s.closest('.source-group').querySelector('.sg-header').classList.add('hl');
+    lake.classList.add('hl');
+    const connFields = [];
+    document.querySelectorAll('.field').forEach(f => {
+      if (f.dataset.sources.split(',').map(x => x.trim()).includes(sid)) {
+        f.classList.add('hl');
+        connFields.push(f.dataset.name);
+      }
+    });
+    hlLines(connFields, false);
+    document.querySelectorAll('.proj-box[data-fields]').forEach(p => {
+      const pf = p.dataset.fields.split(',').map(x => x.trim());
+      if (connFields.some(cf => pf.includes(cf))) p.classList.add('hl');
+    });
+  });
+  s.addEventListener('mouseleave', () => { if (!impactLocked) resetAll(); });
+  s.addEventListener('click', handleImpactClick);
+});
+
+// ── Source group header hover ──
+
+document.querySelectorAll('.sg-header').forEach(h => {
+  h.addEventListener('mouseenter', () => {
+    if (impactLocked) return;
+    const group = h.parentElement;
+    const sids = Array.from(group.querySelectorAll('.src-item')).map(s => s.dataset.id);
+    dimAll();
+    h.classList.add('hl');
+    lake.classList.add('hl');
+    sids.forEach(sid => {
+      const el = document.querySelector(`.src-item[data-id="${sid}"]`);
+      if (el) el.classList.add('hl');
+    });
+    const connFields = [];
+    document.querySelectorAll('.field').forEach(f => {
+      const fsids = f.dataset.sources.split(',').map(x => x.trim());
+      if (sids.some(sid => fsids.includes(sid))) {
+        f.classList.add('hl');
+        connFields.push(f.dataset.name);
+      }
+    });
+    hlLines(connFields, false);
+  });
+  h.addEventListener('mouseleave', () => { if (!impactLocked) resetAll(); });
+});
+
+// ── Init ──
+
+// ── Keyboard shortcuts ──
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    if (detailPanelOpen) closeDetailPanel();
+    else if (document.getElementById('backlog-overlay').classList.contains('open')) closeBacklog();
+  }
+});
+
+window.addEventListener('load', () => {
+  applyCompletedStatus();
+  renderProjects();
+  setTimeout(drawAllLines, 120);
+});
+window.addEventListener('resize', drawAllLines);
+</script>
+</body>
+</html>
