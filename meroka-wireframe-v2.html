@@ -343,6 +343,77 @@ h1 { font-size: 20px; font-weight: 700; color: #111; }
 /* Horizontal split row */
 .arch-row { display: flex; gap: 8px; width: 100%; }
 .arch-row > * { flex: 1; }
+
+/* Phases */
+.phase-card {
+  border: 1.5px solid #e0e0e0; border-radius: 10px; background: #fff; margin-bottom: 12px; overflow: hidden;
+}
+.phase-card.phase-active { border-color: #6366f1; }
+.phase-header {
+  padding: 12px 14px; display: flex; align-items: flex-start; gap: 10px;
+}
+.phase-status-ring {
+  width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; font-weight: 800; color: #6366f1;
+  background: conic-gradient(#6366f1 var(--phase-pct), #e5e7eb var(--phase-pct));
+  position: relative;
+}
+.phase-status-ring::after {
+  content: ''; position: absolute; width: 28px; height: 28px; border-radius: 50%; background: #fff;
+}
+.phase-status-ring span {
+  position: relative; z-index: 1; font-size: 9px;
+}
+.phase-info { flex: 1; min-width: 0; }
+.phase-name { font-size: 12px; font-weight: 700; color: #111; }
+.phase-deadline {
+  display: inline-block; padding: 1px 7px; border-radius: 4px; font-size: 8px; font-weight: 700;
+  margin-left: 6px; background: #fef3c7; color: #92400e; border: 1px solid #fde68a;
+}
+.phase-deadline.phase-complete { background: #d1fae5; color: #065f46; border-color: #a7f3d0; }
+.phase-scope {
+  font-size: 9px; color: #666; margin-top: 3px; line-height: 1.4;
+}
+.phase-progress-bar {
+  height: 4px; background: #e5e7eb; border-radius: 2px; margin: 8px 14px 4px; overflow: hidden;
+}
+.phase-progress-fill {
+  height: 100%; border-radius: 2px; background: #6366f1; transition: width 0.3s;
+}
+.phase-deliverables { padding: 0 14px 12px; }
+.deliv-item {
+  display: flex; align-items: center; gap: 8px; padding: 5px 0;
+  border-bottom: 1px solid #f5f5f5;
+}
+.deliv-item:last-child { border-bottom: none; }
+.deliv-dot {
+  width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+}
+.deliv-dot-done { background: #22c55e; }
+.deliv-dot-wip { background: #eab308; }
+.deliv-dot-pending { background: #d1d5db; }
+.deliv-info { flex: 1; min-width: 0; }
+.deliv-name { font-size: 10px; font-weight: 600; color: #333; }
+.deliv-name a {
+  color: #4f46e5; text-decoration: none; border-bottom: 1px dashed #c7d2fe;
+}
+.deliv-name a:hover { color: #6366f1; border-bottom-color: #6366f1; }
+.deliv-name .deliv-link-icon { font-size: 9px; color: #a5b4fc; margin-left: 3px; }
+.deliv-desc { font-size: 8px; color: #999; margin-top: 1px; }
+.deliv-bar {
+  width: 50px; height: 4px; background: #e5e7eb; border-radius: 2px; overflow: hidden; flex-shrink: 0;
+}
+.deliv-bar-fill { height: 100%; border-radius: 2px; transition: width 0.3s; }
+.deliv-bar-fill.db-done { background: #22c55e; }
+.deliv-bar-fill.db-wip { background: #eab308; }
+.deliv-bar-fill.db-pending { background: #d1d5db; }
+.deliv-pct {
+  font-size: 8px; font-weight: 700; width: 28px; text-align: right; flex-shrink: 0;
+  color: #999;
+}
+.deliv-pct.dp-done { color: #16a34a; }
+.deliv-pct.dp-wip { color: #b45309; }
 .proj-section-title {
   font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.2px;
   color: #999; margin: 16px 0 6px;
@@ -878,6 +949,50 @@ const PROJECTS = [
         fields: ['nearby_employers','employer_benefit_cost','market_concentration','decision_makers','est_overpayment','savings_pitch']
       }
     ],
+    phases: [
+      {
+        name: 'MA Sports Medicine POC',
+        status: 'active',
+        deadline: 'Feb 28, 2026',
+        desc: 'Full 5-layer pipeline for Massachusetts sports medicine only. ~200 practices, 6 taxonomy codes, 15 target CPTs. Proves the thesis with real data for one specialty in one state.',
+        deliverables: [
+          { name: 'Provider Map (NPPES)', desc: 'All MA sports medicine providers from NPPES filtered by taxonomy', status: 'done', pct: 100, url: null },
+          { name: 'PECOS Enrollment', desc: 'Group affiliations and reassignment relationships', status: 'wip', pct: 60, url: null },
+          { name: 'Practice Profiles', desc: 'Web-scraped independence classification via Claude', status: 'wip', pct: 40, url: null },
+          { name: 'Medicare Utilization', desc: 'Medicare payment data for MA target CPTs', status: 'done', pct: 100, url: null },
+          { name: 'TiC Negotiated Rates', desc: 'Rates from UHC, BCBS MA, Aetna for 15 CPTs', status: 'wip', pct: 25, url: null },
+          { name: 'MIPS Quality Scores', desc: 'QPP quality/cost scores for MA providers', status: 'wip', pct: 30, url: null },
+          { name: 'Google Reviews', desc: 'Star ratings and review counts per practice', status: 'wip', pct: 20, url: null },
+          { name: 'Comparison Table', desc: 'provider_comparison_v2 — master join of all 5 layers', status: 'pending', pct: 0, url: null },
+          { name: 'Streamlit Dashboard', desc: 'Visual exploration of MA sports med data', status: 'wip', pct: 50, url: 'http://localhost:8501' },
+          { name: 'CFO Insights Report', desc: 'One-pager with real numbers for employer pitch', status: 'pending', pct: 0, url: null },
+          { name: 'Legal Agent Draft', desc: 'CIN formation doc + direct employer contract template', status: 'pending', pct: 0, url: null }
+        ]
+      },
+      {
+        name: 'MA Full Specialty Expansion',
+        status: 'planned',
+        deadline: 'Q2 2026',
+        desc: 'Expand from sports medicine to all independent practice specialties in Massachusetts. Same 5-layer architecture, broader taxonomy codes and CPT coverage.',
+        deliverables: [
+          { name: 'Taxonomy Expansion', desc: 'Add primary care, dermatology, cardiology, etc.', status: 'pending', pct: 0, url: null },
+          { name: 'TiC Rate Coverage', desc: 'Full CPT catalog across all payers', status: 'pending', pct: 0, url: null },
+          { name: 'Employer Targeting', desc: 'DOL Form 5500 data for MA self-funded employers', status: 'pending', pct: 0, url: null },
+          { name: 'Multi-specialty Dashboard', desc: 'Expanded Streamlit with specialty filters', status: 'pending', pct: 0, url: null }
+        ]
+      },
+      {
+        name: 'Multi-state Rollout',
+        status: 'planned',
+        deadline: 'Q3 2026',
+        desc: 'Replicate the Massachusetts pipeline to additional states. Start with CT, NY, NJ — high concentration of self-funded employers.',
+        deliverables: [
+          { name: 'State Pipeline Template', desc: 'Parameterized pipeline that takes state as input', status: 'pending', pct: 0, url: null },
+          { name: 'CT + NY + NJ Deployment', desc: 'Run full 5-layer pipeline for 3 new states', status: 'pending', pct: 0, url: null },
+          { name: 'Cross-state Comparison', desc: 'National benchmark pricing by CPT and independence status', status: 'pending', pct: 0, url: null }
+        ]
+      }
+    ],
     architecture: {
       nodes: [
         { id:'phone', type:'interface', icon:'P', name:'Phone (Telegram)', desc:'Send instructions, receive status updates', cost:'Free' },
@@ -1120,6 +1235,23 @@ function createProjectCard(proj) {
   const integrated = sources.length - getMissingSources(sources).length;
   const pct = sources.length > 0 ? Math.round((integrated / sources.length) * 100) : 0;
 
+  // Active phase info for the compact card
+  const activePhase = proj.phases ? proj.phases.find(p => p.status === 'active') : null;
+  let phaseHTML = '';
+  if (activePhase) {
+    const apPct = activePhase.deliverables.length > 0
+      ? Math.round(activePhase.deliverables.reduce((s, d) => s + d.pct, 0) / activePhase.deliverables.length) : 0;
+    const apDone = activePhase.deliverables.filter(d => d.status === 'done').length;
+    phaseHTML = `<div style="margin-top:4px;padding:4px 6px;background:#f8f8fc;border-radius:4px;border:1px solid #eee;">
+      <div style="font-size:8px;font-weight:700;color:#6366f1;text-transform:uppercase;letter-spacing:0.5px;">${activePhase.name}</div>
+      <div style="display:flex;align-items:center;gap:6px;margin-top:3px;">
+        <div style="flex:1;height:3px;background:#e5e7eb;border-radius:2px;overflow:hidden;"><div style="height:100%;width:${apPct}%;background:#6366f1;border-radius:2px;"></div></div>
+        <span style="font-size:8px;font-weight:700;color:#888;">${apDone}/${activePhase.deliverables.length}</span>
+        <span style="font-size:7px;font-weight:700;color:#92400e;background:#fef3c7;padding:1px 4px;border-radius:3px;">${activePhase.deadline}</span>
+      </div>
+    </div>`;
+  }
+
   const header = document.createElement('div');
   header.className = 'proj-header';
   header.innerHTML = `
@@ -1130,6 +1262,7 @@ function createProjectCard(proj) {
       </div>
       <div class="proj-desc" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">${proj.shortDesc}</div>
       <div class="proj-meta">${fields.length} fields · ${sources.length} sources · ${pct}% ready</div>
+      ${phaseHTML}
     </div>
     <span class="proj-open-hint" style="font-size:16px;color:#ccc;flex-shrink:0;">&#8599;</span>
   `;
@@ -1159,6 +1292,8 @@ function openDetailPanel(proj) {
   const integrated = sources.length - missing.length;
   const pct = sources.length > 0 ? Math.round((integrated / sources.length) * 100) : 0;
   const hasArch = proj.architecture && proj.architecture.nodes;
+  const hasPhases = proj.phases && proj.phases.length > 0;
+  const hasTabs = hasArch || hasPhases;
 
   let html = '';
 
@@ -1178,15 +1313,23 @@ function openDetailPanel(proj) {
   // Body with tabs
   html += '<div class="detail-panel-body">';
 
-  if (hasArch) {
+  if (hasTabs) {
     html += '<div class="detail-tabs">';
-    html += '<button class="detail-tab active" onclick="switchDetailTab(this,\'tab-intel\')">Intelligence</button>';
-    html += '<button class="detail-tab" onclick="switchDetailTab(this,\'tab-arch\')">Architecture</button>';
+    if (hasPhases) html += '<button class="detail-tab active" onclick="switchDetailTab(this,\'tab-phases\')">Phases</button>';
+    html += `<button class="detail-tab${hasPhases ? '' : ' active'}" onclick="switchDetailTab(this,'tab-intel')">Intelligence</button>`;
+    if (hasArch) html += '<button class="detail-tab" onclick="switchDetailTab(this,\'tab-arch\')">Architecture</button>';
+    html += '</div>';
+  }
+
+  // ── Phases tab ──
+  if (hasPhases) {
+    html += `<div class="detail-tab-content active" id="tab-phases">`;
+    html += renderPhases(proj.phases);
     html += '</div>';
   }
 
   // ── Intelligence tab ──
-  html += `<div class="detail-tab-content active" id="tab-intel">`;
+  html += `<div class="detail-tab-content${hasPhases ? '' : ' active'}" id="tab-intel">`;
 
   if (proj.objective) {
     html += '<div class="proj-section-title">Objective</div>';
@@ -1303,6 +1446,57 @@ function switchDetailTab(btn, tabId) {
   panel.querySelectorAll('.detail-tab-content').forEach(t => t.classList.remove('active'));
   btn.classList.add('active');
   document.getElementById(tabId).classList.add('active');
+}
+
+function renderPhases(phases) {
+  let html = '';
+  phases.forEach(phase => {
+    const totalPct = phase.deliverables.length > 0
+      ? Math.round(phase.deliverables.reduce((sum, d) => sum + d.pct, 0) / phase.deliverables.length)
+      : 0;
+    const done = phase.deliverables.filter(d => d.status === 'done').length;
+    const total = phase.deliverables.length;
+    const isActive = phase.status === 'active';
+
+    html += `<div class="phase-card${isActive ? ' phase-active' : ''}">`;
+    html += '<div class="phase-header">';
+    html += `<div class="phase-status-ring" style="--phase-pct:${totalPct * 3.6}deg"><span>${totalPct}%</span></div>`;
+    html += '<div class="phase-info">';
+    html += `<div class="phase-name">${phase.name}`;
+    const dlClass = phase.status === 'complete' ? ' phase-complete' : '';
+    html += ` <span class="phase-deadline${dlClass}">${phase.deadline}</span>`;
+    html += '</div>';
+    html += `<div class="phase-scope">${phase.desc}</div>`;
+    html += '</div></div>';
+
+    // Overall progress bar
+    html += `<div class="phase-progress-bar"><div class="phase-progress-fill" style="width:${totalPct}%"></div></div>`;
+    html += `<div style="padding:0 14px;font-size:8px;color:#999;margin-bottom:4px;">${done}/${total} deliverables complete</div>`;
+
+    // Deliverables
+    html += '<div class="phase-deliverables">';
+    phase.deliverables.forEach(d => {
+      const dotClass = d.status === 'done' ? 'deliv-dot-done' : d.status === 'wip' ? 'deliv-dot-wip' : 'deliv-dot-pending';
+      const barClass = d.status === 'done' ? 'db-done' : d.status === 'wip' ? 'db-wip' : 'db-pending';
+      const pctClass = d.status === 'done' ? 'dp-done' : d.status === 'wip' ? 'dp-wip' : '';
+
+      html += '<div class="deliv-item">';
+      html += `<div class="deliv-dot ${dotClass}"></div>`;
+      html += '<div class="deliv-info">';
+      if (d.url) {
+        html += `<div class="deliv-name"><a href="${d.url}" target="_blank" rel="noopener">${d.name}<span class="deliv-link-icon">&#8599;</span></a></div>`;
+      } else {
+        html += `<div class="deliv-name">${d.name}</div>`;
+      }
+      html += `<div class="deliv-desc">${d.desc}</div>`;
+      html += '</div>';
+      html += `<div class="deliv-bar"><div class="deliv-bar-fill ${barClass}" style="width:${d.pct}%"></div></div>`;
+      html += `<div class="deliv-pct ${pctClass}">${d.pct}%</div>`;
+      html += '</div>';
+    });
+    html += '</div></div>';
+  });
+  return html;
 }
 
 function renderArchitecture(arch) {
