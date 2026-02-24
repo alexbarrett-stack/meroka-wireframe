@@ -260,8 +260,89 @@ h1 { font-size: 20px; font-weight: 700; color: #111; }
 }
 .detail-close:hover { background: #e5e7eb; color: #333; }
 .detail-panel-body {
-  padding: 16px 24px 24px;
+  padding: 0 24px 24px;
 }
+
+/* Detail tabs */
+.detail-tabs {
+  display: flex; gap: 0; border-bottom: 2px solid #eee; margin: 0 -24px;
+  padding: 0 24px; position: sticky; top: 0; background: #fff; z-index: 1;
+}
+.detail-tab {
+  padding: 10px 16px; font-size: 10px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.8px; color: #999; cursor: pointer; border-bottom: 2px solid transparent;
+  margin-bottom: -2px; transition: all 0.15s; background: none; border-top: none; border-left: none; border-right: none;
+}
+.detail-tab:hover { color: #555; }
+.detail-tab.active { color: #6366f1; border-bottom-color: #6366f1; }
+.detail-tab-content { display: none; padding-top: 16px; }
+.detail-tab-content.active { display: block; }
+
+/* Architecture diagram */
+.arch-flow { display: flex; flex-direction: column; align-items: center; gap: 0; }
+.arch-arrow {
+  width: 2px; height: 20px; background: #d1d5db; position: relative;
+}
+.arch-arrow::after {
+  content: ''; position: absolute; bottom: -4px; left: 50%; transform: translateX(-50%);
+  border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 5px solid #d1d5db;
+}
+.arch-arrow-label {
+  font-size: 7px; font-weight: 700; color: #aaa; text-transform: uppercase; letter-spacing: 0.5px;
+  position: absolute; left: 10px; top: 50%; transform: translateY(-50%); white-space: nowrap;
+}
+.arch-node {
+  border: 1.5px solid #e0e0e0; border-radius: 8px; background: #fff;
+  padding: 10px 14px; width: 100%; text-align: left;
+  transition: border-color 0.15s;
+}
+.arch-node:hover { border-color: #c7d2fe; }
+.arch-node-header { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.arch-node-icon {
+  width: 28px; height: 28px; border-radius: 6px; display: flex; align-items: center;
+  justify-content: center; font-size: 14px; flex-shrink: 0;
+}
+.arch-node-name { font-size: 11px; font-weight: 700; color: #111; }
+.arch-node-desc { font-size: 9px; color: #666; line-height: 1.4; }
+.arch-node-detail { font-size: 8px; color: #888; margin-top: 4px; line-height: 1.5; }
+.arch-node-children {
+  display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px;
+}
+.arch-child {
+  padding: 3px 8px; border-radius: 4px; font-size: 8px; font-weight: 600;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  background: #f8f8fc; border: 1px solid #e8e8e8; color: #555;
+}
+.arch-tables {
+  display: flex; flex-wrap: wrap; gap: 3px; margin-top: 6px;
+}
+.arch-table {
+  padding: 2px 7px; border-radius: 4px; font-size: 8px; font-weight: 600;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  border: 1px solid; display: flex; align-items: center; gap: 4px;
+}
+.arch-table .at-status { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.at-done { background: #22c55e; }
+.at-wip { background: #eab308; }
+.at-pending { background: #d1d5db; }
+.arch-cost {
+  display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 7px;
+  font-weight: 700; background: #f3f4f6; color: #888; margin-left: auto; flex-shrink: 0;
+}
+/* Node type colors */
+.arch-t-interface .arch-node-icon { background: #dbeafe; color: #2563eb; }
+.arch-t-compute .arch-node-icon { background: #e0e7ff; color: #4f46e5; }
+.arch-t-ai .arch-node-icon { background: #fce7f3; color: #db2777; }
+.arch-t-storage .arch-node-icon { background: #d1fae5; color: #059669; }
+.arch-t-output .arch-node-icon { background: #fef3c7; color: #b45309; }
+.arch-t-interface .arch-node { border-left: 3px solid #93c5fd; }
+.arch-t-compute .arch-node { border-left: 3px solid #a5b4fc; }
+.arch-t-ai .arch-node { border-left: 3px solid #f9a8d4; }
+.arch-t-storage .arch-node { border-left: 3px solid #6ee7b7; }
+.arch-t-output .arch-node { border-left: 3px solid #fcd34d; }
+/* Horizontal split row */
+.arch-row { display: flex; gap: 8px; width: 100%; }
+.arch-row > * { flex: 1; }
 .proj-section-title {
   font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.2px;
   color: #999; margin: 16px 0 6px;
@@ -797,6 +878,35 @@ const PROJECTS = [
         fields: ['nearby_employers','employer_benefit_cost','market_concentration','decision_makers','est_overpayment','savings_pitch']
       }
     ],
+    architecture: {
+      nodes: [
+        { id:'phone', type:'interface', icon:'P', name:'Phone (Telegram)', desc:'Send instructions, receive status updates', cost:'Free' },
+        { id:'mac', type:'compute', icon:'M', name:'Mac Mini M4', desc:'Always-on local compute — runs pipelines and agents overnight',
+          children:['OpenClaw agent','Python 3.14 pipelines','Telegram bot','Brave (scraping)'],
+          detail:'~/meroka/ — scripts/, data/ (temp), logs/, outputs/, credentials/' },
+        { id:'claude', type:'ai', icon:'C', name:'Claude Sonnet (Anthropic API)', desc:'Reasoning brain — web scrape classification, insights reports, legal drafting', cost:'$5-30/wk' },
+        { id:'openclaw', type:'ai', icon:'O', name:'OpenClaw Agent Framework', desc:'Gives Claude ability to browse, run code, read/write files. Gateway on port 18789, Brave relay on 18792.', cost:'Free' },
+        { id:'bigquery', type:'storage', icon:'B', name:'Google BigQuery', desc:'meroka-massachusetts.sports_medicine — serverless cloud warehouse', cost:'<$1/wk',
+          tables:[
+            { name:'providers', status:'done', desc:'MA sports medicine from NPPES' },
+            { name:'practice_profiles', status:'wip', desc:'Web-scraped independence classification' },
+            { name:'medicare_utilization', status:'done', desc:'Medicare payment data for MA' },
+            { name:'tic_rates', status:'wip', desc:'Negotiated rates (UHC, BCBS MA, Aetna)' },
+            { name:'mips_scores', status:'wip', desc:'MIPS quality scores' },
+            { name:'practice_reviews', status:'wip', desc:'Google ratings & reviews' },
+            { name:'pecos_enrollment', status:'wip', desc:'Group affiliations' },
+            { name:'provider_comparison_v2', status:'pending', desc:'Master join — all layers' }
+          ]
+        },
+        { id:'output', type:'output', icon:'D', name:'Outputs', desc:'Streamlit dashboard (localhost:8501), CFO insights reports, CIN formation docs, employer contracts' }
+      ],
+      flows: [
+        { from:'phone', to:'mac', label:'Telegram API' },
+        { from:'mac', to:'claude', label:'Anthropic API' },
+        { from:'mac', to:'bigquery', label:'BigQuery SDK' },
+        { from:'bigquery', to:'output', label:'SQL queries' }
+      ]
+    },
     get allFields() {
       const s = new Set();
       this.workflows.forEach(w => w.fields.forEach(f => s.add(f)));
@@ -1048,6 +1158,7 @@ function openDetailPanel(proj) {
   const missing = getMissingSources(sources);
   const integrated = sources.length - missing.length;
   const pct = sources.length > 0 ? Math.round((integrated / sources.length) * 100) : 0;
+  const hasArch = proj.architecture && proj.architecture.nodes;
 
   let html = '';
 
@@ -1064,8 +1175,18 @@ function openDetailPanel(proj) {
     <button class="detail-close" onclick="closeDetailPanel()">&times;</button>
   </div>`;
 
-  // Body
+  // Body with tabs
   html += '<div class="detail-panel-body">';
+
+  if (hasArch) {
+    html += '<div class="detail-tabs">';
+    html += '<button class="detail-tab active" onclick="switchDetailTab(this,\'tab-intel\')">Intelligence</button>';
+    html += '<button class="detail-tab" onclick="switchDetailTab(this,\'tab-arch\')">Architecture</button>';
+    html += '</div>';
+  }
+
+  // ── Intelligence tab ──
+  html += `<div class="detail-tab-content active" id="tab-intel">`;
 
   if (proj.objective) {
     html += '<div class="proj-section-title">Objective</div>';
@@ -1089,7 +1210,6 @@ function openDetailPanel(proj) {
     });
   }
 
-  // Data readiness + timeline
   if (fields.length > 0) {
     html += '<div class="proj-section-title">Data Readiness</div>';
     html += '<div class="data-readiness">';
@@ -1127,7 +1247,6 @@ function openDetailPanel(proj) {
     html += '</div>';
   }
 
-  // Untapped fields
   if (proj.workflows.length > 0) {
     const allWarehouseFields = Array.from(document.querySelectorAll('.field')).map(f => f.dataset.name);
     const projFieldSet = new Set(proj.allFields);
@@ -1140,7 +1259,16 @@ function openDetailPanel(proj) {
     }
   }
 
-  html += '</div>';
+  html += '</div>'; // end tab-intel
+
+  // ── Architecture tab ──
+  if (hasArch) {
+    html += `<div class="detail-tab-content" id="tab-arch">`;
+    html += renderArchitecture(proj.architecture);
+    html += '</div>';
+  }
+
+  html += '</div>'; // end detail-panel-body
   panel.innerHTML = html;
   overlay.classList.add('open');
 
@@ -1150,7 +1278,6 @@ function openDetailPanel(proj) {
       e.stopPropagation();
       const fieldNames = wf.dataset.wfFields.split(',').map(s => s.trim());
       dimAll();
-      // Highlight the card in the pipeline
       const projBox = document.getElementById(proj.id);
       if (projBox) projBox.classList.add('hl');
       lake.classList.add('hl');
@@ -1165,10 +1292,75 @@ function openDetailPanel(proj) {
     wf.addEventListener('mouseleave', () => { resetAll(); });
   });
 
-  // Click overlay background to close
   overlay.onclick = (e) => {
     if (e.target === overlay) closeDetailPanel();
   };
+}
+
+function switchDetailTab(btn, tabId) {
+  const panel = btn.closest('.detail-panel-body');
+  panel.querySelectorAll('.detail-tab').forEach(t => t.classList.remove('active'));
+  panel.querySelectorAll('.detail-tab-content').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById(tabId).classList.add('active');
+}
+
+function renderArchitecture(arch) {
+  let html = '<div class="arch-flow">';
+
+  arch.nodes.forEach((node, i) => {
+    const flow = arch.flows.find(f => f.to === node.id);
+    if (i > 0 && flow) {
+      html += `<div class="arch-arrow"><span class="arch-arrow-label">${flow.label || ''}</span></div>`;
+    } else if (i > 0) {
+      html += '<div class="arch-arrow"></div>';
+    }
+
+    html += `<div class="arch-t-${node.type}" style="width:100%"><div class="arch-node">`;
+    html += '<div class="arch-node-header">';
+    html += `<div class="arch-node-icon">${node.icon}</div>`;
+    html += `<div style="flex:1"><div class="arch-node-name">${node.name}</div></div>`;
+    if (node.cost) html += `<span class="arch-cost">${node.cost}</span>`;
+    html += '</div>';
+    html += `<div class="arch-node-desc">${node.desc}</div>`;
+    if (node.detail) html += `<div class="arch-node-detail">${node.detail}</div>`;
+
+    if (node.children) {
+      html += '<div class="arch-node-children">';
+      node.children.forEach(c => { html += `<span class="arch-child">${c}</span>`; });
+      html += '</div>';
+    }
+
+    if (node.tables) {
+      html += '<div class="arch-tables">';
+      node.tables.forEach(t => {
+        const sc = t.status === 'done' ? 'at-done' : t.status === 'wip' ? 'at-wip' : 'at-pending';
+        const bg = t.status === 'done' ? 'background:#f0fdf4;border-color:#bbf7d0;color:#166534;' :
+                   t.status === 'wip' ? 'background:#fefce8;border-color:#fde68a;color:#854d0e;' :
+                   'background:#f9fafb;border-color:#e5e7eb;color:#9ca3af;';
+        html += `<span class="arch-table" style="${bg}" title="${t.desc}"><span class="at-status ${sc}"></span>${t.name}</span>`;
+      });
+      html += '</div>';
+    }
+
+    html += '</div></div>';
+  });
+
+  html += '</div>';
+
+  // ETL flow summary
+  html += '<div class="proj-section-title" style="margin-top:16px">Data Flow</div>';
+  html += '<div style="font-size:9px;color:#555;line-height:1.8;">';
+  html += '<strong>1.</strong> Download — CMS / TiC / QPP APIs &rarr; raw files on Mac Mini<br>';
+  html += '<strong>2.</strong> Filter — Python filters to MA + target taxonomy/CPT codes<br>';
+  html += '<strong>3.</strong> Load — CSV upload to BigQuery, raw files discarded<br>';
+  html += '<strong>4.</strong> Enrich — Claude classifies practice websites &rarr; structured JSON &rarr; BigQuery<br>';
+  html += '<strong>5.</strong> Join — BigQuery SQL joins all tables &rarr; provider_comparison_v2<br>';
+  html += '<strong>6.</strong> Analyze — Streamlit dashboard + Claude insights report<br>';
+  html += '<strong>7.</strong> Legal — Claude generates CIN docs + employer contracts';
+  html += '</div>';
+
+  return html;
 }
 
 function closeDetailPanel() {
