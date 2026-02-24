@@ -1315,21 +1315,16 @@ function openDetailPanel(proj) {
 
   if (hasTabs) {
     html += '<div class="detail-tabs">';
-    if (hasPhases) html += '<button class="detail-tab active" onclick="switchDetailTab(this,\'tab-phases\')">Phases</button>';
-    html += `<button class="detail-tab${hasPhases ? '' : ' active'}" onclick="switchDetailTab(this,'tab-intel')">Intelligence</button>`;
+    html += '<button class="detail-tab active" onclick="switchDetailTab(this,\'tab-intel\')">Intelligence</button>';
+    if (hasPhases) html += '<button class="detail-tab" onclick="switchDetailTab(this,\'tab-phases\')">Phases</button>';
     if (hasArch) html += '<button class="detail-tab" onclick="switchDetailTab(this,\'tab-arch\')">Architecture</button>';
     html += '</div>';
   }
 
-  // ── Phases tab ──
-  if (hasPhases) {
-    html += `<div class="detail-tab-content active" id="tab-phases">`;
-    html += renderPhases(proj.phases);
-    html += '</div>';
-  }
-
   // ── Intelligence tab ──
-  html += `<div class="detail-tab-content${hasPhases ? '' : ' active'}" id="tab-intel">`;
+  html += '<div class="detail-tab-content active" id="tab-intel">';
+
+  // ── (Phases tab rendered after Intelligence) ──
 
   if (proj.objective) {
     html += '<div class="proj-section-title">Objective</div>';
@@ -1403,6 +1398,13 @@ function openDetailPanel(proj) {
   }
 
   html += '</div>'; // end tab-intel
+
+  // ── Phases tab ──
+  if (hasPhases) {
+    html += '<div class="detail-tab-content" id="tab-phases">';
+    html += renderPhases(proj.phases);
+    html += '</div>';
+  }
 
   // ── Architecture tab ──
   if (hasArch) {
