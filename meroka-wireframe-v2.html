@@ -1126,23 +1126,33 @@ const PROJECTS = [
     name: 'Rural Health Classifier',
     type: 'internal',
     owner: 'Bonnie',
-    shortDesc: 'ML classifier identifying rural and underserved healthcare facilities using geographic, demographic, and provider data to surface coverage gaps and guide resource allocation.',
-    objective: 'Build a classification model that flags rural and health professional shortage area (HPSA) practices from NPPES, HRSA, POS, and Census data. The classifier labels each practice by rurality tier (urban, suburban, rural, frontier) and underserved status, enabling targeted outreach and policy analysis.',
+    shortDesc: 'Classify practices by Rural Health Clinic (RHC) eligibility — geographic rurality via RUCA/Census, HPSA/MUA shortage area status, CLIA lab certification, and Medicare/Medicaid payer mix — to identify practices that qualify for RHC designation and its enhanced reimbursement.',
+    objective: 'CMS defines RHC eligibility as: (1) located in a non-urbanized area (Census), (2) within a Health Professional Shortage Area or Medically Underserved Area (HRSA), (3) CLIA-certified lab for basic diagnostics, and (4) high Medicare/Medicaid patient share. This project builds a pipeline that scores every practice on these dimensions, identifies RHC-eligible practices that haven\'t yet applied, and surfaces the revenue uplift from RHC cost-based reimbursement vs. standard fee-for-service.',
     workflows: [
       {
-        name: 'Geographic Tagging',
-        desc: 'Classify provider locations using RUCA codes, RUCC, and Census tract data. Map each NPI to a rurality tier and HPSA designation.',
-        fields: ['npi','address','practice_name','specialty','fqhc_flag','facility_type_flag']
+        name: 'Rural Eligibility Classification',
+        desc: 'Map each practice ZIP to USDA RUCA codes (ZIP-level, from ers.usda.gov). RUCA ≥ 4 = non-urbanized. Cross-reference with Census urbanized area boundaries. Output: rural/non-rural flag per practice, RUCA code, and rurality tier (metro, micro, small town, rural).',
+        fields: ['npi','address','practice_name','specialty','facility_type_flag','fqhc_flag']
       },
       {
         name: 'Shortage Area Overlay',
-        desc: 'Join HRSA HPSA/MUA designations with provider locations. Identify practices in designated shortage areas and medically underserved areas.',
-        fields: ['npi','address','fqhc_flag','facility_type_flag','providers','provider_count']
+        desc: 'Join HRSA HPSA and MUA/MUP designations (bulk download from data.hrsa.gov) with practice locations. A practice must be in a HPSA or MUA to qualify for RHC. Output: HPSA score, MUA flag, shortage area type (primary care, dental, mental health).',
+        fields: ['npi','address','practice_name','fqhc_flag','facility_type_flag','providers','provider_count']
       },
       {
-        name: 'Access Score Model',
-        desc: 'Calculate population-to-provider ratios and drive-time access scores per county/tract. Flag areas where access falls below national benchmarks.',
-        fields: ['npi','specialty','address','provider_count','medicare_beneficiary_count','medicare_service_count']
+        name: 'CLIA Lab Certification Check',
+        desc: 'Cross-reference practices with CMS Provider of Services CLIA file (~244K lab records, quarterly from data.cms.gov). RHCs must hold a CLIA certificate (waiver or compliance) for basic lab: urinalysis, hemoglobin/hematocrit, blood glucose, stool occult blood, pregnancy tests. Output: CLIA status, certificate type, facility type, accreditation org.',
+        fields: ['npi','address','practice_name','facility_type_flag']
+      },
+      {
+        name: 'Payer Mix Analysis',
+        desc: 'Build revenue mix profile from Medicare Physician Utilization PUF — total beneficiaries, services, payments by CPT. Use Bene_Dual_Pct (% dual-eligible) as Medicaid proxy. High Medicare + Medicaid share = stronger RHC candidate. Output: Medicare revenue estimate, dual-eligible %, estimated payer split by CPT.',
+        fields: ['npi','cpt_codes','medicare_service_count','medicare_beneficiary_count','medicare_allowed_amt','medicare_volume_by_cpt','payer_mix_estimate','est_annual_revenue']
+      },
+      {
+        name: 'RHC Readiness Score',
+        desc: 'Combine all signals into a composite RHC eligibility score: rural flag (pass/fail), shortage area (pass/fail), CLIA status (pass/fail), payer mix (% government). Rank practices by readiness. Estimate revenue uplift from RHC cost-based reimbursement vs current fee schedule.',
+        fields: ['npi','practice_name','specialty','address','providers','provider_count','medicare_allowed_amt','est_annual_revenue','payer_mix_estimate','facility_type_flag','fqhc_flag']
       }
     ],
     get allFields() {
