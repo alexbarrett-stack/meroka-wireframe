@@ -8,8 +8,8 @@
 body { background: #fafbfc; font-family: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif; overflow-x: auto; }
 
 .header { text-align: left; padding: 20px 0 6px 24px; position: relative; }
-h1 { font-size: 20px; font-weight: 700; color: #111; }
-.subtitle { font-size: 11px; color: #888; margin-top: 3px; }
+h1 { font-size: 22px; font-weight: 800; color: #1a237e; letter-spacing: -0.3px; }
+.subtitle { font-size: 11px; color: #64748b; margin-top: 3px; font-weight: 500; }
 
 /* Status controls — top right */
 .status-controls {
@@ -140,19 +140,20 @@ h1 { font-size: 20px; font-weight: 700; color: #111; }
 /* === LAKE === */
 .lake-stage { width: 110px; }
 .lake-box {
-  background: linear-gradient(135deg, #1a237e 0%, #283593 50%, #1565c0 100%);
+  background: #fff;
+  border: 1.5px solid #e0e4ea;
   border-radius: 10px; height: 100%; min-height: 400px;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
-  padding: 16px 8px; color: #fff; text-align: center; position: relative; overflow: hidden;
+  padding: 16px 8px; color: #1a237e; text-align: center; position: relative; overflow: hidden;
   transition: opacity 0.2s, box-shadow 0.3s;
 }
 .lake-box::before {
   content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-  background: repeating-linear-gradient(0deg, transparent, transparent 28px, rgba(255,255,255,0.03) 28px, rgba(255,255,255,0.03) 29px);
+  background: repeating-linear-gradient(0deg, transparent, transparent 28px, rgba(26,35,126,0.02) 28px, rgba(26,35,126,0.02) 29px);
 }
-.lake-title { font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 14px; z-index: 1; }
-.lake-fmt { font-size: 8px; font-weight: 600; background: rgba(255,255,255,0.15); padding: 3px 8px; border-radius: 10px; margin: 2px 0; z-index: 1; }
-.lake-box.hl { box-shadow: 0 0 20px rgba(21,101,192,0.4); }
+.lake-title { font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 14px; z-index: 1; color: #1a237e; }
+.lake-fmt { font-size: 8px; font-weight: 600; background: #f0f1f8; color: #3949ab; padding: 3px 8px; border-radius: 10px; margin: 2px 0; z-index: 1; }
+.lake-box.hl { box-shadow: 0 0 20px rgba(21,101,192,0.15); border-color: #90caf9; }
 
 /* === WAREHOUSE === */
 .warehouse-stage { width: 520px; }
@@ -759,7 +760,7 @@ svg.lines { position: absolute; top: 0; left: 0; pointer-events: none; z-index: 
 .pipeline.hov .field.hl { opacity: 1; transform: scale(1.08); z-index: 2; position: relative; }
 .pipeline.hov .field.hl.selected { box-shadow: 0 0 0 2.5px #6366f1; }
 .pipeline.hov .proj-box.hl { opacity: 1; }
-.pipeline.hov .lake-box.hl { opacity: 1; box-shadow: 0 0 20px rgba(21,101,192,0.4); }
+.pipeline.hov .lake-box.hl { opacity: 1; box-shadow: 0 0 20px rgba(21,101,192,0.15); border-color: #90caf9; }
 
 /* Insights panel (bottom bar) */
 .insights-bar {
