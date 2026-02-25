@@ -821,7 +821,7 @@ svg.lines { position: absolute; top: 0; left: 0; pointer-events: none; z-index: 
 <div class="stage lake-stage">
   <div class="stage-label">Ingestion</div>
   <div class="lake-box" id="lake">
-    <div class="lake-title">Data<br>Lake</div>
+    <div class="lake-title">AWS S3<br>Data Lake</div>
     <div class="lake-fmt">CSV</div>
     <div class="lake-fmt">JSON</div>
     <div class="lake-fmt">API</div>
@@ -1002,6 +1002,7 @@ const PROJECTS = [
     id: 'proj-dcm',
     name: 'Direct Contracting Marketplace',
     type: 'external',
+    owner: 'Alex Barrett',
     shortDesc: 'Market-making platform enabling direct contracting between independent medical practices and self-insured employers — bypassing traditional insurance networks. Proves independent practices deliver equal or better care at lower cost, makes it transactable with standardized pricing, and runs AI agents for legal/admin scaffolding.',
     objective: 'Meroka is a market-making platform that enables direct contracting between independent medical practices and self-insured employers — bypassing traditional insurance networks. The core thesis: independent practices deliver equal or better care at significantly lower cost than hospital-affiliated and PE-owned practices, but lack the infrastructure to contract directly with employers. Meroka provides that infrastructure by proving the gap (comprehensive cost/quality dataset), making it transactable (standardized pricing derived from data, automated legal scaffolding including CIN formation and direct employer contracts), and running AI agents that handle administrative work previously requiring teams of lawyers and RCM specialists.',
     workflows: [
@@ -1114,10 +1115,41 @@ const PROJECTS = [
     id: 'proj-malpha',
     name: 'Malpha',
     type: 'internal',
+    owner: 'Othmane',
     shortDesc: 'Coming soon',
     objective: '',
     workflows: [],
     get allFields() { return []; }
+  },
+  {
+    id: 'proj-rhc',
+    name: 'Rural Health Classifier',
+    type: 'internal',
+    owner: 'Bonnie',
+    shortDesc: 'ML classifier identifying rural and underserved healthcare facilities using geographic, demographic, and provider data to surface coverage gaps and guide resource allocation.',
+    objective: 'Build a classification model that flags rural and health professional shortage area (HPSA) practices from NPPES, HRSA, POS, and Census data. The classifier labels each practice by rurality tier (urban, suburban, rural, frontier) and underserved status, enabling targeted outreach and policy analysis.',
+    workflows: [
+      {
+        name: 'Geographic Tagging',
+        desc: 'Classify provider locations using RUCA codes, RUCC, and Census tract data. Map each NPI to a rurality tier and HPSA designation.',
+        fields: ['npi','address','practice_name','specialty','fqhc_flag','facility_type_flag']
+      },
+      {
+        name: 'Shortage Area Overlay',
+        desc: 'Join HRSA HPSA/MUA designations with provider locations. Identify practices in designated shortage areas and medically underserved areas.',
+        fields: ['npi','address','fqhc_flag','facility_type_flag','providers','provider_count']
+      },
+      {
+        name: 'Access Score Model',
+        desc: 'Calculate population-to-provider ratios and drive-time access scores per county/tract. Flag areas where access falls below national benchmarks.',
+        fields: ['npi','specialty','address','provider_count','medicare_beneficiary_count','medicare_service_count']
+      }
+    ],
+    get allFields() {
+      const s = new Set();
+      this.workflows.forEach(w => w.fields.forEach(f => s.add(f)));
+      return Array.from(s);
+    }
   }
 ];
 
@@ -1342,6 +1374,7 @@ function createProjectCard(proj) {
         <span class="proj-name" style="margin-bottom:0">${proj.name}</span>
         <span class="proj-type-badge ${proj.type}">${proj.type}</span>
       </div>
+      ${proj.owner ? `<div style="font-size:8px;color:#888;margin-top:2px;">Owner: <strong style="color:#555;">${proj.owner}</strong></div>` : ''}
       <div class="proj-desc" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">${proj.shortDesc}</div>
       <div class="proj-meta">${fields.length} fields · ${sources.length} sources · ${pct}% ready</div>
       ${phaseHTML}
@@ -1387,7 +1420,7 @@ function openDetailPanel(proj) {
         <span class="proj-type-badge ${proj.type}">${proj.type}</span>
       </div>
       <div class="detail-panel-desc">${proj.shortDesc}</div>
-      <div class="detail-panel-meta">${fields.length} fields · ${sources.length} sources · ${pct}% data ready</div>
+      <div class="detail-panel-meta">${proj.owner ? proj.owner + ' · ' : ''}${fields.length} fields · ${sources.length} sources · ${pct}% data ready</div>
     </div>
     <button class="detail-close" onclick="closeDetailPanel()">&times;</button>
   </div>`;
@@ -2152,7 +2185,7 @@ const SOURCE_CARDS = {
     records: '~8–9 million NPIs',
     access: 'Direct download — no account or API key required',
     cost: 'free',
-    lakeOrg: 'Partitioned by state, indexed on NPI. Raw CSV → Parquet in lake.',
+    lakeOrg: 'S3 bucket partitioned by state, indexed on NPI. Raw CSV → Parquet via AWS Glue.',
     notes: 'File too large for Excel. API max 200 results/query (lookup only, not bulk). Deactivated NPIs remain in file. Version 2 effective 03/2026 with extended field lengths.'
   },
   pecos: {
@@ -2165,7 +2198,7 @@ const SOURCE_CARDS = {
     records: '~1.5–2 million enrolled providers',
     access: 'Direct download — no account needed',
     cost: 'free',
-    lakeOrg: 'Quarterly snapshots in Parquet, keyed on NPI + enrollment type.',
+    lakeOrg: 'Quarterly snapshots in S3 as Parquet, keyed on NPI + enrollment type.',
     notes: 'Subset of full PECOS data. Only city/state/ZIP (no street addresses). Reflects actual Medicare enrollment status, not just NPI registration.'
   },
   pos: {
@@ -2178,7 +2211,7 @@ const SOURCE_CARDS = {
     records: '~100K providers + 300K labs',
     access: 'Direct download — no account needed',
     cost: 'free',
-    lakeOrg: 'Quarterly snapshots keyed on CCN. Joined with NPPES for NPI cross-reference.',
+    lakeOrg: 'Quarterly snapshots in S3 keyed on CCN. Joined with NPPES for NPI cross-reference.',
     notes: 'Point-in-time snapshot file. iQIES split from "OTHER" in Q4 2023. CMS retiring SAS format after April 2026.'
   },
   hrsa: {
@@ -2192,7 +2225,7 @@ const SOURCE_CARDS = {
     records: '~1,400 orgs / 15,000+ sites / 32M patients',
     access: 'Direct download. Granular UDS data may require FOIA.',
     cost: 'free',
-    lakeOrg: 'Annual UDS snapshots + site-level records partitioned by state.',
+    lakeOrg: 'Annual UDS snapshots in S3 + site-level records partitioned by state.',
     notes: 'UDS data has 6-12 month lag. Not all HRSA sites are CMS-certified FQHCs. HRSA Geospatial Warehouse provides geocoded locations.'
   },
   medicare_util: {
@@ -2205,7 +2238,7 @@ const SOURCE_CARDS = {
     records: '~10M+ rows/year',
     access: 'Direct download — no account needed',
     cost: 'free',
-    lakeOrg: 'Annual partitions. Provider-level and service-level aggregations in warehouse.',
+    lakeOrg: 'Annual partitions in S3. Provider-level and service-level aggregations via Athena.',
     notes: 'Medicare Fee-For-Service only — no Medicare Advantage, Medicaid, or commercial. Records with <11 beneficiaries are suppressed. CPT codes copyrighted by AMA.'
   },
   tic: {
@@ -2218,7 +2251,7 @@ const SOURCE_CARDS = {
     records: 'Billions of rate records across all insurers',
     access: 'Free HTTPS download from each insurer\'s site. No central registry.',
     cost: 'free',
-    lakeOrg: 'Streaming JSON parse (ijson). Normalized to NPI × CPT rate rows in Parquet. Partitioned by insurer and state.',
+    lakeOrg: 'Streaming JSON parse (ijson). Normalized to NPI × CPT rate rows in S3 Parquet. Partitioned by insurer and state.',
     notes: 'Files are massive (single insurer can be 2+ TB). Requires streaming JSON parsers. Data quality varies by insurer. Schema 2.0 effective Feb 2026. Third-party aggregators: Serif Health, Turquoise Health.'
   },
   fair_health: {
@@ -2232,7 +2265,7 @@ const SOURCE_CARDS = {
     records: '57B+ commercial + 53B+ Medicare claim records, ~150M lives',
     access: 'License agreement required. Contact service@fairhealth.org',
     cost: 'paid',
-    lakeOrg: 'API responses cached in warehouse by CPT × geozip. Refreshed semi-annually.',
+    lakeOrg: 'API responses cached in S3/Athena by CPT × geozip. Refreshed semi-annually.',
     notes: 'Not publicly accessible in bulk. NCQA-certified. Covers ~75% of privately insured U.S. population. Data back to 2002. Heavily used in litigation and out-of-network reimbursement.'
   },
   meps: {
@@ -2245,7 +2278,7 @@ const SOURCE_CARDS = {
     records: '~22K–35K persons/year (nationally representative)',
     access: 'Direct download. Restricted files require AHRQ Data Center access.',
     cost: 'free',
-    lakeOrg: 'Annual person-level files with survey weights preserved. Event files linked by DUPERSID.',
+    lakeOrg: 'Annual person-level files in S3 with survey weights preserved. Event files linked by DUPERSID.',
     notes: 'Survey data — must use provided weights for national estimates. Civilian noninstitutionalized population only. Variable names can change across years.'
   },
   rand: {
@@ -2259,7 +2292,7 @@ const SOURCE_CARDS = {
     records: '4,000+ hospitals, 2,000+ ASCs',
     access: 'Sage browsing free. Data purchasable. HCRIS freely downloadable.',
     cost: 'free',
-    lakeOrg: 'HCRIS quarterly imports keyed on provider number. Sage benchmarks as supplementary reference table.',
+    lakeOrg: 'HCRIS quarterly imports in S3 keyed on provider number. Sage benchmarks as supplementary reference table.',
     notes: 'Headline finding: commercial insurers pay ~254% of Medicare rates. Sage data from employer claims + state APCDs — not all payers. Study round 6 expected Sept 2027.'
   },
   mips: {
@@ -2273,7 +2306,7 @@ const SOURCE_CARDS = {
     records: '~700K–900K clinician records',
     access: 'Direct download from data.cms.gov — no account needed',
     cost: 'free',
-    lakeOrg: 'Annual snapshots keyed on NPI × TIN. Score history table for longitudinal tracking.',
+    lakeOrg: 'Annual snapshots in S3 keyed on NPI × TIN. Score history table for longitudinal tracking.',
     notes: 'PY2023 is most recent public data. Payment adjustments range -9% to +9%. Transitioning toward MIPS Value Pathways (MVPs). Not all clinicians are MIPS-eligible.'
   },
   care_compare: {
@@ -2287,7 +2320,7 @@ const SOURCE_CARDS = {
     records: '~5K hospitals, ~15K nursing homes, ~1.3M clinicians',
     access: 'Direct download + API — no registration needed',
     cost: 'free',
-    lakeOrg: 'Quarterly snapshots per provider type. Hospital and clinician tables joined with NPPES/PECOS.',
+    lakeOrg: 'Quarterly snapshots in S3 per provider type. Hospital and clinician tables joined with NPPES/PECOS.',
     notes: 'Replaced legacy Hospital Compare / Physician Compare. API returns max 1,000 rows (use offset pagination). Data dictionaries are PDFs — critical for field understanding.'
   },
   leapfrog: {
@@ -2300,7 +2333,7 @@ const SOURCE_CARDS = {
     records: '~3,000 general acute care hospitals',
     access: 'Free public lookup. Enterprise: subscription for bulk data + API via The Hopper.',
     cost: 'paid',
-    lakeOrg: 'Semi-annual grade snapshots per hospital. Historical grade tracking for trend analysis.',
+    lakeOrg: 'Semi-annual grade snapshots in S3 per hospital. Historical grade tracking for trend analysis.',
     notes: 'Only general acute care hospitals (excludes VA, critical access, specialty, children\'s). Only 12% of hospitals sustained an "A" for 5+ consecutive rounds. Methodology is publicly downloadable.'
   },
   med_boards: {
@@ -2313,7 +2346,7 @@ const SOURCE_CARDS = {
     records: '1M+ physician and PA profiles',
     access: 'Account required. Email pdc@fsmb.org for API credentials.',
     cost: 'paid',
-    lakeOrg: 'Monthly license snapshots keyed on NPI. Sanction events as append-only log.',
+    lakeOrg: 'Monthly license snapshots in S3 keyed on NPI. Sanction events as append-only log.',
     notes: '$9/physician (standard), $12 (premium). Only centralized multi-state source. NCQA-certified primary-source verification. Only MDs, DOs, and PAs — no nurses/pharmacists. Free state-by-state lookups exist but require 50+ separate systems.'
   },
   website: {
@@ -2326,7 +2359,7 @@ const SOURCE_CARDS = {
     records: '~250K+ medical practice websites',
     access: 'Custom web scrapers (Scrapy, Playwright). Public sites — no auth.',
     cost: 'free',
-    lakeOrg: 'Scraped HTML stored in object storage. Parsed fields in structured tables by practice.',
+    lakeOrg: 'Scraped HTML stored in S3. Parsed fields in structured tables by practice via Glue ETL.',
     notes: 'No standardization — every site is different. Common platforms (WordPress, Squarespace) provide some consistency. High maintenance cost: sites change frequently. Respect robots.txt. PE-owned practices may reveal corporate parent in site footer.'
   },
   google: {
@@ -2339,7 +2372,7 @@ const SOURCE_CARDS = {
     records: 'Hundreds of thousands of healthcare listings',
     access: 'Places API: Google Cloud project + API key. Pay-per-use.',
     cost: 'paid',
-    lakeOrg: 'API responses cached with TTL. Review snapshots taken monthly. Keyed on Place ID + NPI cross-ref.',
+    lakeOrg: 'API responses cached in S3 with TTL. Review snapshots taken monthly. Keyed on Place ID + NPI cross-ref.',
     notes: 'Places API is the only legal method — scraping prohibited. Field masks critical for cost control (request only needed fields). 77% of patients start healthcare search via Google. GBP Management API only for your own listings.'
   },
   healthgrades: {
@@ -2352,7 +2385,7 @@ const SOURCE_CARDS = {
     records: '3M+ providers, 4,500 hospitals',
     access: 'Free browse. No official bulk API. Third-party scrapers: Apify, Datashake.',
     cost: 'restricted',
-    lakeOrg: 'Scraped profiles stored by NPI. Review text and ratings in separate review table.',
+    lakeOrg: 'Scraped profiles stored in S3 by NPI. Review text and ratings in separate review table.',
     notes: 'No public API — monetized through advertising. Scraping may violate ToS. Auto-creates profiles for every NPI. Vitals (now under WebMD) has quality concerns (AI-generated photos, suppressed reviews). Parent company Optum creates conflict of interest.'
   },
   linkedin: {
@@ -2365,7 +2398,7 @@ const SOURCE_CARDS = {
     records: '1B+ global members, ~1M+ U.S. physicians estimated',
     access: 'Official API requires LinkedIn Partner approval (extremely restricted). Scraping prohibited with aggressive enforcement.',
     cost: 'restricted',
-    lakeOrg: 'If obtained: employment history keyed on NPI or name match. Employer transitions flagged for PE acquisition detection.',
+    lakeOrg: 'If obtained: employment history in S3 keyed on NPI or name match. Employer transitions flagged for PE acquisition detection.',
     notes: 'Most legally aggressive platform against scraping. Work history moved behind login wall (late 2025). Valuable for PE-physician relationship detection. Consider ZoomInfo/Apollo as alternative aggregators. Sales Navigator or Recruiter licenses as fallback.'
   },
   sos: {
@@ -2378,7 +2411,7 @@ const SOURCE_CARDS = {
     records: 'SEC: 800K+ entities, 18M+ filings. SoS: tens of millions across all states.',
     access: 'SEC: free, no key (10 req/sec, User-Agent header required). State SoS: free individual lookup; bulk data $0–$9,500+ per state.',
     cost: 'free',
-    lakeOrg: 'SEC filings indexed by CIK. State entity records deduplicated by name + registered agent. Cross-referenced to identify PE holding structures.',
+    lakeOrg: 'SEC filings in S3 indexed by CIK. State entity records deduplicated by name + registered agent. Cross-referenced to identify PE holding structures.',
     notes: 'Most healthcare practices are private (not in SEC). SEC useful for PE firms and publicly traded health systems. 8-K filings can reveal practice acquisitions. No federal centralized business registry. Delaware is critical for PE structures but provides minimal public data. OpenCorporates aggregates many states.'
   },
   form5500: {
@@ -2392,7 +2425,7 @@ const SOURCE_CARDS = {
     records: '~800K plans file annually',
     access: 'Direct download — no account needed',
     cost: 'free',
-    lakeOrg: 'Latest-filing extracts keyed on plan sponsor EIN. Joined with employer records for self-funded plan identification.',
+    lakeOrg: 'Latest-filing extracts in S3 keyed on plan sponsor EIN. Joined with employer records for self-funded plan identification.',
     notes: 'Complex relational structure — join on ACK_ID. Use "Latest" dataset (not "All") to avoid amended duplicates. Self-reported and not audited. Form 5500-EZ (one-participant plans) filed with IRS, not included here.'
   },
   gao: {
@@ -2405,7 +2438,7 @@ const SOURCE_CARDS = {
     records: 'N/A — analytical reports, not row-level data',
     access: 'Direct download of PDFs — no account needed',
     cost: 'free',
-    lakeOrg: 'ASPE MSA-level HHI values extracted from PDF tables and stored as reference data.',
+    lakeOrg: 'ASPE MSA-level HHI values extracted from PDF tables and stored in S3 as reference data.',
     notes: 'No structured downloadable dataset — findings within PDF reports require manual or PDF-parse extraction. Underlying data (IQVIA, SK&A) is proprietary and expensive. ASPE environmental scan provides best structured HHI by MSA.'
   },
   ai_classifier: {
@@ -2418,7 +2451,7 @@ const SOURCE_CARDS = {
     records: 'Target universe: ~200K+ practices',
     access: 'Internal API / BigQuery',
     cost: 'free',
-    lakeOrg: 'Classification results in BigQuery with full signal lineage. Versioned by model iteration.',
+    lakeOrg: 'Classification results in S3 (raw) and BigQuery (serving). Full signal lineage. Versioned by model iteration.',
     notes: 'Only as good as upstream sources. Ground truth labels are scarce — PE ownership often not publicly disclosed. Low-confidence results flagged for manual review. Temporal lag: a practice acquired last month may not yet show in public records.'
   },
   pe_list: {
@@ -2431,7 +2464,7 @@ const SOURCE_CARDS = {
     records: '488 PE-owned hospitals + 420+ platforms tracked',
     access: 'PESP: free public web. PitchBook: paid enterprise subscription ($20K–$50K+/yr).',
     cost: 'free',
-    lakeOrg: 'PE platform reference table with firm/platform/specialty/geography. Updated from PESP + manual curation.',
+    lakeOrg: 'PE platform reference table in S3 with firm/platform/specialty/geography. Updated from PESP + manual curation.',
     notes: 'No single authoritative PE registry. PE ownership often obscured through holding company layers. Key specialties: dental (132 deals in 2024), behavioral health, dermatology, ophthalmology. Regulatory landscape shifting — 35+ states now require notification of PE healthcare transactions.'
   },
   derived: {
@@ -2444,7 +2477,7 @@ const SOURCE_CARDS = {
     records: 'Mirrors entity universe (one per provider/practice)',
     access: 'Internal BigQuery / API',
     cost: 'free',
-    lakeOrg: 'Materialized views in BigQuery with source lineage metadata. Versioned by pipeline run.',
+    lakeOrg: 'Raw derivations in S3, materialized views in BigQuery. Source lineage metadata. Versioned by pipeline run.',
     notes: 'Derived fields inherit upstream limitations. Document all derivation logic and source versions. Combine data with different cadences carefully — timestamp derivations and flag staleness. Verify upstream licenses permit derivative works.'
   }
 };
@@ -2513,7 +2546,7 @@ function openSourceCard(srcId) {
   // Lake organization
   html += '<div class="src-card-divider"></div>';
   html += '<div class="src-card-row">';
-  html += '<div class="src-card-label">Lake Org</div>';
+  html += '<div class="src-card-label">AWS Lake</div>';
   html += `<div class="src-card-value">${card.lakeOrg}</div>`;
   html += '</div>';
 
