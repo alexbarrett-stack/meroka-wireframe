@@ -61,6 +61,38 @@ h1 { font-size: 20px; font-weight: 700; color: #111; }
 .sg-web .sg-header { background: #fce8e6; color: #c5221f; }
 .sg-employer .sg-header { background: #f3e8fd; color: #7627bb; }
 .sg-ai .sg-header { background: #fce4ec; color: #c62828; }
+.sg-legal .sg-header { background: #e8eaf6; color: #283593; }
+
+/* State law expandable row */
+.src-item.state-law-row { flex-wrap: wrap; padding-bottom: 0; }
+.state-law-toggle {
+  display: flex; align-items: center; gap: 4px; width: 100%; cursor: pointer; padding-bottom: 5px;
+}
+.state-law-toggle .sn { flex: 1; }
+.state-law-badge {
+  font-size: 7px; font-weight: 800; padding: 2px 6px; border-radius: 7px;
+  background: #e8eaf6; color: #283593; letter-spacing: 0.3px; flex-shrink: 0;
+}
+.state-law-expand-icon {
+  font-size: 10px; color: #999; transition: transform 0.2s; flex-shrink: 0; margin-left: 2px;
+}
+.state-law-row.expanded .state-law-expand-icon { transform: rotate(90deg); }
+.state-law-children {
+  display: none; width: 100%; border-top: 1px solid #f0f0f0; margin-top: 0;
+}
+.state-law-row.expanded .state-law-children { display: block; }
+.state-law-state {
+  padding: 4px 10px 4px 20px; font-size: 9px; display: flex; align-items: center;
+  gap: 6px; border-bottom: 1px solid #f8f8f8; cursor: pointer; transition: background 0.15s;
+}
+.state-law-state:last-child { border-bottom: none; }
+.state-law-state:hover { background: #f5f6ff; }
+.state-law-state .sls-name { font-weight: 600; color: #333; flex: 1; }
+.state-law-state .sls-count {
+  font-size: 7px; font-weight: 700; color: #888; background: #f3f4f6;
+  padding: 1px 5px; border-radius: 4px;
+}
+.m-legal { background: #e8eaf6; color: #283593; }
 
 .src-item {
   padding: 5px 10px; font-size: 10px; display: flex; align-items: center;
@@ -154,6 +186,7 @@ h1 { font-size: 20px; font-weight: 700; color: #111; }
 .f-comparison { background: #fef; border-color: #dad; color: #636; }
 .f-employer { background: #fef; border-color: #dad; color: #636; }
 .f-rural { background: #e8faf0; border-color: #a3d9bc; color: #1a5632; }
+.f-legal { background: #e8eaf6; border-color: #9fa8da; color: #283593; }
 .f-technology { background: #eef; border-color: #aac; color: #336; }
 
 /* Heatmap mode */
@@ -811,6 +844,25 @@ svg.lines { position: absolute; top: 0; left: 0; pointer-events: none; z-index: 
     <div class="src-item" data-id="gao" data-effort="high"><span class="sn">GAO Market Conc.</span><span class="src-status-badge">&#10003;</span><span class="src-effort effort-high"></span><span class="sm m-scraper">SCRAPER</span></div>
   </div>
 
+  <div class="source-group sg-legal">
+    <div class="sg-header">Legal &amp; Regulatory</div>
+    <div class="src-item" data-id="aks" data-effort="med"><span class="sn">Anti-Kickback (AKS)</span><span class="src-status-badge">&#10003;</span><span class="src-effort effort-med"></span><span class="sm m-legal">LAW</span></div>
+    <div class="src-item" data-id="stark" data-effort="med"><span class="sn">Stark Law</span><span class="src-status-badge">&#10003;</span><span class="src-effort effort-med"></span><span class="sm m-legal">LAW</span></div>
+    <div class="src-item" data-id="erisa" data-effort="med"><span class="sn">ERISA</span><span class="src-status-badge">&#10003;</span><span class="src-effort effort-med"></span><span class="sm m-legal">LAW</span></div>
+    <div class="src-item" data-id="vbc_safe_harbors" data-effort="med"><span class="sn">Value-Based Safe Harbors</span><span class="src-status-badge">&#10003;</span><span class="src-effort effort-med"></span><span class="sm m-legal">LAW</span></div>
+    <div class="src-item" data-id="ftc_cin" data-effort="med"><span class="sn">FTC/DOJ CIN Guidelines</span><span class="src-status-badge">&#10003;</span><span class="src-effort effort-med"></span><span class="sm m-legal">LAW</span></div>
+    <div class="src-item state-law-row" data-id="state_law" data-effort="high" id="state-law-row">
+      <div class="state-law-toggle" onclick="toggleStateLaw(event)">
+        <span class="sn">State Law</span>
+        <span class="src-status-badge">&#10003;</span>
+        <span class="src-effort effort-high"></span>
+        <span class="state-law-badge" id="state-law-badge">1 state</span>
+        <span class="state-law-expand-icon">&#8250;</span>
+      </div>
+      <div class="state-law-children" id="state-law-children"></div>
+    </div>
+  </div>
+
   <div class="source-group sg-ai">
     <div class="sg-header">AI &amp; Derived</div>
     <div class="src-item" data-id="ai_classifier" data-effort="vhigh"><span class="sn">AI Independence Classifier</span><span class="src-status-badge">&#10003;</span><span class="src-effort effort-vhigh"></span><span class="sm m-agent">AI</span></div>
@@ -959,6 +1011,18 @@ svg.lines { position: absolute; top: 0; left: 0; pointer-events: none; z-index: 
         <div class="field f-employer" data-name="savings_pitch" data-sources="derived">savings_pitch<span class="heat-dot"></span><span class="risk-dot"></span><span class="field-tooltip"></span></div>
       </div>
     </div>
+    <div class="fsec">
+      <div class="fsec-label">Legal &amp; Compliance</div>
+      <div class="frow">
+        <div class="field f-legal" data-name="aks_safe_harbor_flags" data-sources="aks,vbc_safe_harbors">aks_safe_harbor_flags<span class="heat-dot"></span><span class="risk-dot"></span><span class="field-tooltip"></span></div>
+        <div class="field f-legal" data-name="stark_exception_flags" data-sources="stark,vbc_safe_harbors">stark_exception_flags<span class="heat-dot"></span><span class="risk-dot"></span><span class="field-tooltip"></span></div>
+        <div class="field f-legal" data-name="cin_eligibility" data-sources="ftc_cin">cin_eligibility<span class="heat-dot"></span><span class="risk-dot"></span><span class="field-tooltip"></span></div>
+        <div class="field f-legal" data-name="erisa_plan_type" data-sources="erisa,form5500">erisa_plan_type<span class="heat-dot"></span><span class="risk-dot"></span><span class="field-tooltip"></span></div>
+        <div class="field f-legal" data-name="state_compliance_flags" data-sources="state_law">state_compliance_flags<span class="heat-dot"></span><span class="risk-dot"></span><span class="field-tooltip"></span></div>
+        <div class="field f-legal" data-name="tpa_requirements" data-sources="state_law,erisa">tpa_requirements<span class="heat-dot"></span><span class="risk-dot"></span><span class="field-tooltip"></span></div>
+        <div class="field f-legal" data-name="contract_template_id" data-sources="derived">contract_template_id<span class="heat-dot"></span><span class="risk-dot"></span><span class="field-tooltip"></span></div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -995,7 +1059,8 @@ const SRC_COLORS = {
 // ── Data Model ──
 
 const COMPLETED_SOURCES = new Set([
-  'nppes','pecos','pos','clia','medicare_util','mips','care_compare','hrsa','hpsa_mua','ruca','census_ua','meps','pe_list','derived'
+  'nppes','pecos','pos','clia','medicare_util','mips','care_compare','hrsa','hpsa_mua','ruca','census_ua','meps','pe_list','derived',
+  'aks','stark','erisa','vbc_safe_harbors','ftc_cin','state_law'
 ]);
 
 const BACKLOG = [
@@ -1047,8 +1112,8 @@ const PROJECTS = [
       },
       {
         name: 'L5: Employer Contracting & Legal Agent',
-        desc: 'Given an employer and qualified independent practices, auto-generate CIN formation docs, direct employer-provider contracts with standardized pricing, TPA coordination memos, and DocuSign-ready approval bundles.',
-        fields: ['nearby_employers','employer_benefit_cost','market_concentration','decision_makers','est_overpayment','savings_pitch']
+        desc: 'Given an employer and qualified independent practices, auto-generate CIN formation docs, direct employer-provider contracts with standardized pricing, TPA coordination memos, and DocuSign-ready approval bundles. Grounded in AKS safe harbors, Stark exceptions, ERISA requirements, FTC CIN guidelines, and state-specific compliance rules.',
+        fields: ['nearby_employers','employer_benefit_cost','market_concentration','decision_makers','est_overpayment','savings_pitch','aks_safe_harbor_flags','stark_exception_flags','cin_eligibility','erisa_plan_type','state_compliance_flags','tpa_requirements','contract_template_id']
       }
     ],
     phases: [
@@ -2202,6 +2267,93 @@ document.querySelectorAll('.field').forEach(f => {
 
 // ── Source Card Data ──
 
+// ── State Law Data Model ──
+
+const STATE_LAW_DATA = {
+  MA: {
+    name: 'Massachusetts',
+    abbr: 'MA',
+    sources: [
+      { name: 'MA AG Healthcare Division', desc: 'AG jurisdiction over healthcare market consolidation, annual cost trends reports showing independent vs system cost data', url: 'https://www.mass.gov/orgs/attorney-generals-health-care-division' },
+      { name: 'MA Health Policy Commission', desc: 'State body reviewing healthcare market consolidation. Publishes detailed cost/quality data, provider price variation reports.', url: 'https://www.mass.gov/orgs/health-policy-commission' },
+      { name: 'CHIA (Center for Health Info & Analysis)', desc: 'MA All-Payer Claims Database (APCD), provider price variation data, market analytics. APCD requires data use agreement.', url: 'https://www.chiamass.gov' },
+      { name: 'Chapter 224 Cost Containment', desc: 'MA cost containment law — sets healthcare cost growth benchmark, requires reporting from providers and payers.', url: 'https://malegislature.gov/Laws/SessionLaws/Acts/2012/Chapter224' },
+      { name: 'MA Division of Insurance', desc: 'TPA licensing requirements, network adequacy rules for self-insured plans.', url: 'https://www.mass.gov/orgs/division-of-insurance' },
+      { name: 'MA Board of Registration in Medicine', desc: 'Physician credential verification and disciplinary history lookup.', url: 'https://www.massmedboard.org/public/physician-lookup' },
+      { name: 'MA General Laws Ch. 176D', desc: 'Unfair insurance practices — governs TPA conduct and claims handling.', url: 'https://malegislature.gov/Laws/GeneralLaws/PartI/TitleXXII/Chapter176D' },
+      { name: 'MA General Laws Ch. 175', desc: 'Insurance licensing — requirements for entities facilitating health plan transactions.', url: 'https://malegislature.gov/Laws/GeneralLaws/PartI/TitleXXII/Chapter175' }
+    ]
+  }
+};
+
+function renderStateLawChildren() {
+  const container = document.getElementById('state-law-children');
+  const states = Object.keys(STATE_LAW_DATA);
+  document.getElementById('state-law-badge').textContent = states.length + (states.length === 1 ? ' state' : ' states');
+  let html = '';
+  states.forEach(abbr => {
+    const st = STATE_LAW_DATA[abbr];
+    html += `<div class="state-law-state" onclick="openStateLawCard('${abbr}')">
+      <span class="sls-name">${st.abbr} — ${st.name}</span>
+      <span class="sls-count">${st.sources.length} sources</span>
+    </div>`;
+  });
+  container.innerHTML = html;
+}
+
+function toggleStateLaw(e) {
+  e.stopPropagation();
+  document.getElementById('state-law-row').classList.toggle('expanded');
+}
+
+function openStateLawCard(abbr) {
+  const st = STATE_LAW_DATA[abbr];
+  if (!st) return;
+  const overlay = document.getElementById('source-overlay');
+  const panel = document.getElementById('source-panel');
+  sourcePanelOpen = true;
+
+  let html = '<div class="src-card-header">';
+  html += '<div class="src-card-header-info">';
+  html += `<div class="src-card-title">State Law — ${st.name}</div>`;
+  html += `<div class="src-card-agency">${st.sources.length} regulatory sources mapped</div>`;
+  html += '</div>';
+  html += '<button class="detail-close" onclick="closeSourceCard()">&times;</button>';
+  html += '</div>';
+
+  html += '<div class="src-card-body">';
+  html += '<div class="src-card-stat-row">';
+  html += `<div class="src-card-stat"><div class="src-card-stat-val">${st.sources.length}</div><div class="src-card-stat-label">Sources</div></div>`;
+  html += '<div class="src-card-stat"><div class="src-card-stat-val"><span class="src-card-pill pill-free">Free / Public</span></div><div class="src-card-stat-label">Cost</div></div>';
+  html += '<div class="src-card-stat"><div class="src-card-stat-val">PDF / Web</div><div class="src-card-stat-label">Format</div></div>';
+  html += '</div>';
+
+  html += '<div class="src-card-divider"></div>';
+
+  st.sources.forEach((src, i) => {
+    html += '<div style="margin-bottom:12px;">';
+    html += `<div style="font-size:10px;font-weight:700;color:#283593;margin-bottom:3px;">${i+1}. ${src.name}</div>`;
+    html += `<div style="font-size:9px;color:#555;line-height:1.5;margin-bottom:4px;">${src.desc}</div>`;
+    if (src.url) html += `<div style="font-size:9px;"><a href="${src.url}" target="_blank" style="color:#4f46e5;text-decoration:none;border-bottom:1px dashed #c7d2fe;word-break:break-all;">${src.url}</a></div>`;
+    html += '</div>';
+  });
+
+  html += '<div class="src-card-divider"></div>';
+  html += '<div class="src-card-row">';
+  html += '<div class="src-card-label">AWS Lake</div>';
+  html += '<div class="src-card-value">State regulatory documents stored in S3 under s3://meroka-legal/{state}/. PDF text extracted and chunked for RAG retrieval. Vector embeddings indexed for Claude context injection.</div>';
+  html += '</div>';
+
+  html += '<div class="src-card-row">';
+  html += '<div class="src-card-label">Notes</div>';
+  html += '<div class="src-card-value"><div class="src-card-note">Legal knowledge base built for RAG — source documents ingested, chunked (~500 tokens), embedded, and stored in vector DB. Claude retrieves relevant chunks when drafting contracts and compliance docs. Output is informational — does not replace legal counsel.</div></div>';
+  html += '</div>';
+
+  html += '</div>';
+  panel.innerHTML = html;
+  overlay.classList.add('open');
+}
+
 const SOURCE_CARDS = {
   nppes: {
     name: 'NPPES — National Plan & Provider Enumeration System',
@@ -2564,6 +2716,88 @@ const SOURCE_CARDS = {
     cost: 'free',
     lakeOrg: 'Raw derivations in S3, materialized views in BigQuery. Source lineage metadata. Versioned by pipeline run.',
     notes: 'Derived fields inherit upstream limitations. Document all derivation logic and source versions. Combine data with different cadences carefully — timestamp derivations and flag staleness. Verify upstream licenses permit derivative works.'
+  },
+  aks: {
+    name: 'Anti-Kickback Statute (AKS)',
+    agency: 'HHS Office of Inspector General (OIG)',
+    url: 'https://www.law.cornell.edu/uscode/text/42/1320a-7b',
+    apiUrl: 'https://oig.hhs.gov/compliance/safe-harbor-regulations/',
+    format: 'Legal statute text, Federal Register rules, OIG Advisory Opinions (PDF)',
+    structure: 'Prohibits remuneration arrangements that induce referrals for federal healthcare program services. Key safe harbors for Meroka: personal services & management contracts, fair market value compensation, value-based care (2021). OIG advisory opinions provide case-specific guidance on CINs, gainsharing, and direct contracting.',
+    frequency: 'Statute is permanent; safe harbors updated periodically; advisory opinions issued on request',
+    records: 'N/A — legal text + ~200 advisory opinions',
+    access: 'Free — statute on Cornell LII, safe harbors on OIG website, advisory opinions searchable',
+    cost: 'free',
+    lakeOrg: 'PDF text extracted and chunked for RAG in S3. Safe harbor text indexed separately for precise retrieval. Advisory opinions tagged by topic (CIN, gainsharing, VBC).',
+    notes: 'The 2021 value-based care safe harbors are the most critical for Meroka\'s model — they were specifically designed for arrangements like direct contracting. Three tiers: care coordination (low risk), substantial downside risk, and full financial risk. Criminal statute — violations carry up to 10 years imprisonment.'
+  },
+  stark: {
+    name: 'Stark Law — Physician Self-Referral',
+    agency: 'Centers for Medicare & Medicaid Services (CMS)',
+    url: 'https://www.law.cornell.edu/uscode/text/42/1395nn',
+    apiUrl: 'https://www.cms.gov/Medicare/Fraud-and-Abuse/PhysicianSelfReferral',
+    format: 'Legal statute text, CMS Final Rules (Federal Register), FAQ documents (PDF)',
+    structure: 'Prohibits physician referrals for designated health services (DHS) to entities with financial relationships — unless an exception applies. Key exceptions for Meroka: personal services, fair market value, value-based arrangements (2021), group practice. CMS FAQ provides interpretive guidance.',
+    frequency: 'Statute is permanent; 2021 final rule added VBC exceptions',
+    records: 'N/A — legal text + CMS guidance docs',
+    access: 'Free — statute on Cornell LII, final rules on Federal Register, FAQ on CMS website',
+    cost: 'free',
+    lakeOrg: 'Exceptions text extracted and indexed in S3 for RAG. 2021 final rule chunked with cross-references to AKS safe harbors.',
+    notes: 'Civil (not criminal) statute — but violations trigger False Claims Act liability. The 2021 value-based arrangements exception mirrors the AKS safe harbors and significantly reduces compliance burden for CIN-based direct contracting.'
+  },
+  erisa: {
+    name: 'ERISA — Employee Retirement Income Security Act',
+    agency: 'U.S. Department of Labor (DOL)',
+    url: 'https://www.law.cornell.edu/uscode/text/29/chapter-18',
+    apiUrl: 'https://www.dol.gov/agencies/ebsa/laws-and-regulations/laws/erisa',
+    format: 'Legal statute text, DOL guidance documents, FAQs (PDF)',
+    structure: 'Governs self-insured employer health plans — Meroka\'s employer clients. ERISA preempts most state insurance law, giving self-insured employers more flexibility to direct contract. Key provisions: Section 3(1) plan definitions, SPD requirements for adding direct contract arrangements, fiduciary duty when steering employees to specific providers.',
+    frequency: 'Statute is permanent; DOL guidance updated periodically',
+    records: 'N/A — legal text + DOL guidance',
+    access: 'Free — statute on Cornell LII, guidance on DOL EBSA website',
+    cost: 'free',
+    lakeOrg: 'ERISA plan amendment templates and fiduciary duty rules in S3. Cross-referenced with Form 5500 data for employer plan identification.',
+    notes: 'ERISA preemption is key — self-insured employers are NOT subject to state insurance mandates, which is why direct contracting bypassing traditional insurance networks is legally viable. Fiduciary duty requires employers to act prudently when directing employees to specific providers.'
+  },
+  vbc_safe_harbors: {
+    name: 'Value-Based Care Safe Harbors (2021)',
+    agency: 'HHS Office of Inspector General (OIG) + CMS',
+    url: 'https://www.federalregister.gov/documents/2020/12/02/2020-26072/medicare-and-state-health-care-programs-fraud-and-abuse-protections-for-value-based-arrangements',
+    format: 'Federal Register final rule (PDF, ~300 pages)',
+    structure: 'Three new AKS safe harbors + three new Stark exceptions for value-based arrangements: (1) Care coordination arrangements (low risk), (2) Value-based arrangements with substantial downside risk, (3) Full financial risk arrangements. Defines "value-based enterprise," "value-based purpose," and "VBE participant." Includes detailed examples.',
+    frequency: 'Effective Jan 19, 2021; permanent until amended',
+    records: 'N/A — single final rule document',
+    access: 'Free — Federal Register, OIG website',
+    cost: 'free',
+    lakeOrg: 'Full rule text in S3, chunked by safe harbor tier. Definition sections and examples indexed separately for precise RAG retrieval.',
+    notes: 'The single most important federal development for Meroka\'s legal model. These safe harbors were specifically designed to enable arrangements where providers and payers (including self-insured employers via VBEs) share accountability for cost and quality. A CIN qualifies as a "value-based enterprise" under these rules.'
+  },
+  ftc_cin: {
+    name: 'FTC/DOJ CIN & Antitrust Guidelines',
+    agency: 'Federal Trade Commission + Department of Justice',
+    url: 'https://www.ftc.gov/sites/default/files/documents/public_events/joint-venture-hearings-antitrust-guidelines-collaboration-among-competitors/ftcdojguidelines.pdf',
+    apiUrl: 'https://www.ftc.gov/advice-guidance/competition-guidance/industry-guidance/health-care',
+    format: 'Policy statements (PDF), advisory opinions, enforcement actions',
+    structure: 'FTC standard for CIN legality: providers must be clinically integrated (not just economically), must monitor/control utilization, improve quality, reduce costs. Integration must be substantial enough to justify joint negotiation. Statement 8 specifically covers physician network joint ventures. FTC advisory opinions provide case-specific CIN guidance.',
+    frequency: 'Policy statements updated periodically; advisory opinions on request',
+    records: 'N/A — policy documents + ~30 health care advisory opinions',
+    access: 'Free — FTC website, DOJ antitrust division website',
+    cost: 'free',
+    lakeOrg: 'Statement 8 and health care advisory opinions in S3, chunked and indexed. CIN formation requirements checklist derived and stored as structured reference.',
+    notes: 'The FTC "clinical integration" standard is what makes a CIN legally defensible for joint price negotiation. Without genuine clinical integration (quality programs, utilization monitoring, shared protocols), a CIN is just a price-fixing cartel. FTC has issued favorable advisory opinions for CINs with strong integration programs.'
+  },
+  state_law: {
+    name: 'State Law — Regulatory Knowledge Base',
+    agency: 'Various state agencies (AG offices, insurance divisions, health policy commissions, medical boards)',
+    url: null,
+    format: 'Statutes, regulations, policy reports, APCD data (PDF, web, CSV)',
+    structure: 'Per-state regulatory mapping: AG healthcare oversight, cost containment laws, insurance/TPA licensing, medical board credentialing, all-payer claims data access, unfair insurance practice rules. Each state has unique requirements for direct contracting, CIN formation, and TPA operations.',
+    frequency: 'Varies by state — legislative sessions, AG reports (annual), insurance rules (ongoing)',
+    records: 'Varies — MA has 8 mapped sources',
+    access: 'Mostly free public access. State APCDs may require data use agreements.',
+    cost: 'free',
+    lakeOrg: 'State regulatory documents in S3 under s3://meroka-legal/{state}/. PDF text extracted, chunked, and embedded for RAG retrieval. Vector index per state for targeted context injection.',
+    notes: 'State law complexity is the main barrier to multi-state expansion. Each state has unique insurance regulations, TPA licensing, and AG oversight. ERISA preemption helps (self-insured plans bypass state insurance mandates) but state fraud/abuse and corporate practice of medicine laws still apply. Starting with MA, expanding to CT, NY, NJ.'
   }
 };
 
@@ -2678,6 +2912,7 @@ document.querySelectorAll('.src-item').forEach(s => {
   });
   s.addEventListener('mouseleave', () => { if (!impactLocked) resetAll(); });
   s.addEventListener('click', (e) => {
+    if (s.dataset.id === 'state_law') return; // handled by toggleStateLaw + child clicks
     if (pipeline.classList.contains('impact-mode')) {
       handleImpactClick(e);
     } else {
@@ -2731,6 +2966,7 @@ document.getElementById('source-overlay').addEventListener('click', (e) => {
 
 window.addEventListener('load', () => {
   applyCompletedStatus();
+  renderStateLawChildren();
   renderProjects();
   setTimeout(drawAllLines, 120);
 });
