@@ -153,6 +153,7 @@ h1 { font-size: 20px; font-weight: 700; color: #111; }
 .f-satisfaction { background: #ffe; border-color: #dda; color: #663; }
 .f-comparison { background: #fef; border-color: #dad; color: #636; }
 .f-employer { background: #fef; border-color: #dad; color: #636; }
+.f-rural { background: #e8faf0; border-color: #a3d9bc; color: #1a5632; }
 .f-technology { background: #eef; border-color: #aac; color: #336; }
 
 /* Heatmap mode */
@@ -771,7 +772,11 @@ svg.lines { position: absolute; top: 0; left: 0; pointer-events: none; z-index: 
     <div class="src-item" data-id="nppes" data-effort="low"><span class="sn">NPPES</span><span class="src-status-badge">&#10003;</span><span class="src-effort effort-low"></span><span class="sm m-csv">CSV</span></div>
     <div class="src-item" data-id="pecos" data-effort="low"><span class="sn">CMS PECOS</span><span class="src-status-badge">&#10003;</span><span class="src-effort effort-low"></span><span class="sm m-csv">CSV</span></div>
     <div class="src-item" data-id="pos" data-effort="low"><span class="sn">CMS Provider of Services</span><span class="src-status-badge">&#10003;</span><span class="src-effort effort-low"></span><span class="sm m-csv">CSV</span></div>
+    <div class="src-item" data-id="clia" data-effort="low"><span class="sn">CMS CLIA Labs</span><span class="src-status-badge">&#10003;</span><span class="src-effort effort-low"></span><span class="sm m-csv">CSV</span></div>
     <div class="src-item" data-id="hrsa" data-effort="med"><span class="sn">HRSA FQHC</span><span class="src-status-badge">&#10003;</span><span class="src-effort effort-med"></span><span class="sm m-api">API</span></div>
+    <div class="src-item" data-id="hpsa_mua" data-effort="low"><span class="sn">HRSA HPSA / MUA</span><span class="src-status-badge">&#10003;</span><span class="src-effort effort-low"></span><span class="sm m-csv">CSV</span></div>
+    <div class="src-item" data-id="ruca" data-effort="low"><span class="sn">USDA RUCA Codes</span><span class="src-status-badge">&#10003;</span><span class="src-effort effort-low"></span><span class="sm m-csv">CSV</span></div>
+    <div class="src-item" data-id="census_ua" data-effort="low"><span class="sn">Census Urban Areas</span><span class="src-status-badge">&#10003;</span><span class="src-effort effort-low"></span><span class="sm m-csv">SHP</span></div>
   </div>
 
   <div class="source-group sg-cost">
@@ -868,6 +873,20 @@ svg.lines { position: absolute; top: 0; left: 0; pointer-events: none; z-index: 
         <div class="field f-independence" data-name="pe_platform_match" data-sources="pe_list">pe_platform_match<span class="heat-dot"></span><span class="risk-dot"></span><span class="field-tooltip"></span></div>
         <div class="field f-independence" data-name="facility_type_flag" data-sources="pos">facility_type_flag<span class="heat-dot"></span><span class="risk-dot"></span><span class="field-tooltip"></span></div>
         <div class="field f-independence" data-name="fqhc_flag" data-sources="hrsa">fqhc_flag<span class="heat-dot"></span><span class="risk-dot"></span><span class="field-tooltip"></span></div>
+      </div>
+    </div>
+    <div class="fsec">
+      <div class="fsec-label">Rural &amp; Shortage</div>
+      <div class="frow">
+        <div class="field f-rural" data-name="ruca_code" data-sources="ruca">ruca_code<span class="heat-dot"></span><span class="risk-dot"></span><span class="field-tooltip"></span></div>
+        <div class="field f-rural" data-name="rurality_tier" data-sources="ruca,census_ua">rurality_tier<span class="heat-dot"></span><span class="risk-dot"></span><span class="field-tooltip"></span></div>
+        <div class="field f-rural" data-name="hpsa_flag" data-sources="hpsa_mua">hpsa_flag<span class="heat-dot"></span><span class="risk-dot"></span><span class="field-tooltip"></span></div>
+        <div class="field f-rural" data-name="mua_flag" data-sources="hpsa_mua">mua_flag<span class="heat-dot"></span><span class="risk-dot"></span><span class="field-tooltip"></span></div>
+        <div class="field f-rural" data-name="hpsa_score" data-sources="hpsa_mua">hpsa_score<span class="heat-dot"></span><span class="risk-dot"></span><span class="field-tooltip"></span></div>
+        <div class="field f-rural" data-name="clia_status" data-sources="clia">clia_status<span class="heat-dot"></span><span class="risk-dot"></span><span class="field-tooltip"></span></div>
+        <div class="field f-rural" data-name="clia_cert_type" data-sources="clia">clia_cert_type<span class="heat-dot"></span><span class="risk-dot"></span><span class="field-tooltip"></span></div>
+        <div class="field f-rural" data-name="dual_eligible_pct" data-sources="medicare_util">dual_eligible_pct<span class="heat-dot"></span><span class="risk-dot"></span><span class="field-tooltip"></span></div>
+        <div class="field f-rural" data-name="rhc_eligibility_score" data-sources="derived">rhc_eligibility_score<span class="heat-dot"></span><span class="risk-dot"></span><span class="field-tooltip"></span></div>
       </div>
     </div>
     <div class="fsec">
@@ -976,7 +995,7 @@ const SRC_COLORS = {
 // ── Data Model ──
 
 const COMPLETED_SOURCES = new Set([
-  'nppes','pecos','pos','medicare_util','mips','care_compare','hrsa','meps','pe_list','derived'
+  'nppes','pecos','pos','clia','medicare_util','mips','care_compare','hrsa','hpsa_mua','ruca','census_ua','meps','pe_list','derived'
 ]);
 
 const BACKLOG = [
@@ -1124,7 +1143,7 @@ const PROJECTS = [
   {
     id: 'proj-rhc',
     name: 'Rural Health Classifier',
-    type: 'internal',
+    type: 'external',
     owner: 'Bonnie',
     shortDesc: 'Classify practices by Rural Health Clinic (RHC) eligibility — geographic rurality via RUCA/Census, HPSA/MUA shortage area status, CLIA lab certification, and Medicare/Medicaid payer mix — to identify practices that qualify for RHC designation and its enhanced reimbursement.',
     objective: 'CMS defines RHC eligibility as: (1) located in a non-urbanized area (Census), (2) within a Health Professional Shortage Area or Medically Underserved Area (HRSA), (3) CLIA-certified lab for basic diagnostics, and (4) high Medicare/Medicaid patient share. This project builds a pipeline that scores every practice on these dimensions, identifies RHC-eligible practices that haven\'t yet applied, and surfaces the revenue uplift from RHC cost-based reimbursement vs. standard fee-for-service.',
@@ -1132,27 +1151,27 @@ const PROJECTS = [
       {
         name: 'Rural Eligibility Classification',
         desc: 'Map each practice ZIP to USDA RUCA codes (ZIP-level, from ers.usda.gov). RUCA ≥ 4 = non-urbanized. Cross-reference with Census urbanized area boundaries. Output: rural/non-rural flag per practice, RUCA code, and rurality tier (metro, micro, small town, rural).',
-        fields: ['npi','address','practice_name','specialty','facility_type_flag','fqhc_flag']
+        fields: ['npi','address','practice_name','specialty','ruca_code','rurality_tier','facility_type_flag','fqhc_flag']
       },
       {
         name: 'Shortage Area Overlay',
         desc: 'Join HRSA HPSA and MUA/MUP designations (bulk download from data.hrsa.gov) with practice locations. A practice must be in a HPSA or MUA to qualify for RHC. Output: HPSA score, MUA flag, shortage area type (primary care, dental, mental health).',
-        fields: ['npi','address','practice_name','fqhc_flag','facility_type_flag','providers','provider_count']
+        fields: ['npi','address','practice_name','hpsa_flag','mua_flag','hpsa_score','fqhc_flag','facility_type_flag','providers','provider_count']
       },
       {
         name: 'CLIA Lab Certification Check',
         desc: 'Cross-reference practices with CMS Provider of Services CLIA file (~244K lab records, quarterly from data.cms.gov). RHCs must hold a CLIA certificate (waiver or compliance) for basic lab: urinalysis, hemoglobin/hematocrit, blood glucose, stool occult blood, pregnancy tests. Output: CLIA status, certificate type, facility type, accreditation org.',
-        fields: ['npi','address','practice_name','facility_type_flag']
+        fields: ['npi','address','practice_name','clia_status','clia_cert_type','facility_type_flag']
       },
       {
         name: 'Payer Mix Analysis',
         desc: 'Build revenue mix profile from Medicare Physician Utilization PUF — total beneficiaries, services, payments by CPT. Use Bene_Dual_Pct (% dual-eligible) as Medicaid proxy. High Medicare + Medicaid share = stronger RHC candidate. Output: Medicare revenue estimate, dual-eligible %, estimated payer split by CPT.',
-        fields: ['npi','cpt_codes','medicare_service_count','medicare_beneficiary_count','medicare_allowed_amt','medicare_volume_by_cpt','payer_mix_estimate','est_annual_revenue']
+        fields: ['npi','cpt_codes','medicare_service_count','medicare_beneficiary_count','medicare_allowed_amt','medicare_volume_by_cpt','dual_eligible_pct','payer_mix_estimate','est_annual_revenue']
       },
       {
         name: 'RHC Readiness Score',
         desc: 'Combine all signals into a composite RHC eligibility score: rural flag (pass/fail), shortage area (pass/fail), CLIA status (pass/fail), payer mix (% government). Rank practices by readiness. Estimate revenue uplift from RHC cost-based reimbursement vs current fee schedule.',
-        fields: ['npi','practice_name','specialty','address','providers','provider_count','medicare_allowed_amt','est_annual_revenue','payer_mix_estimate','facility_type_flag','fqhc_flag']
+        fields: ['npi','practice_name','specialty','address','providers','provider_count','ruca_code','rurality_tier','hpsa_flag','mua_flag','clia_status','dual_eligible_pct','rhc_eligibility_score','medicare_allowed_amt','est_annual_revenue','payer_mix_estimate','facility_type_flag','fqhc_flag']
       }
     ],
     get allFields() {
@@ -2224,6 +2243,20 @@ const SOURCE_CARDS = {
     lakeOrg: 'Quarterly snapshots in S3 keyed on CCN. Joined with NPPES for NPI cross-reference.',
     notes: 'Point-in-time snapshot file. iQIES split from "OTHER" in Q4 2023. CMS retiring SAS format after April 2026.'
   },
+  clia: {
+    name: 'CMS CLIA Labs — Clinical Laboratory Certification',
+    agency: 'Centers for Medicare & Medicaid Services (CMS)',
+    url: 'https://data.cms.gov/provider-characteristics/hospitals-and-other-facilities/provider-of-services-file-clinical-laboratories',
+    apiUrl: 'https://qcor.cms.gov/basic_research.jsp',
+    format: 'CSV (~156 MB), JSON API (no key required)',
+    structure: 'One record per CLIA-certified lab. Fields: CLIA number, facility name, address, certificate type (Waiver, PPM, Compliance, Accreditation), lab status, ownership type, facility type (physician office, hospital, independent, FQHC, pharmacy, etc.), testing specialties, specimen volume, accrediting org.',
+    frequency: 'Quarterly',
+    records: '~244,000 lab records',
+    access: 'Direct download from data.cms.gov — no account needed. API available. Individual lookups via QCOR.',
+    cost: 'free',
+    lakeOrg: 'Quarterly snapshots in S3 keyed on CLIA number. Linked to NPPES via address matching for NPI cross-reference.',
+    notes: 'Most RHCs hold a Certificate of Waiver (for CLIA-waived tests) or PPM certificate. Facility type code 21 = Physician Office, 09 = FQHC, 06 = Community Clinic. NBER also provides reformatted versions in SAS/Stata.'
+  },
   hrsa: {
     name: 'HRSA — Federally Qualified Health Centers',
     agency: 'Health Resources & Services Administration (HRSA)',
@@ -2237,6 +2270,48 @@ const SOURCE_CARDS = {
     cost: 'free',
     lakeOrg: 'Annual UDS snapshots in S3 + site-level records partitioned by state.',
     notes: 'UDS data has 6-12 month lag. Not all HRSA sites are CMS-certified FQHCs. HRSA Geospatial Warehouse provides geocoded locations.'
+  },
+  hpsa_mua: {
+    name: 'HRSA HPSA / MUA Designations',
+    agency: 'Health Resources & Services Administration (HRSA)',
+    url: 'https://data.hrsa.gov/data/download',
+    apiUrl: 'https://data.hrsa.gov/tools/shortage-area/by-address',
+    format: 'CSV/XLSX (bulk download), interactive web tool',
+    structure: 'Health Professional Shortage Areas (HPSA): designation type (primary care, dental, mental health), HPSA score (1-25), geographic area, population served, provider-to-population ratio. Medically Underserved Areas (MUA/MUP): Index of Medical Underservice score, designation type, geographic boundaries.',
+    frequency: 'Rolling (designations reviewed on application/renewal)',
+    records: '~7,000+ HPSA designations, ~4,000+ MUA/MUP designations',
+    access: 'Bulk download from data.hrsa.gov (Health Workforce section) — no account needed. Address-level lookup tool available.',
+    cost: 'free',
+    lakeOrg: 'HPSA and MUA boundaries in S3, geocoded to census tracts. Lookup table by ZIP for quick eligibility checks.',
+    notes: 'A practice must be in a HPSA or MUA to qualify for RHC certification. HPSA score (1-25) determines priority for National Health Service Corps placements. Designations can be geographic, population-based, or facility-based. Use the "Am I Rural?" tool at ruralhealthinfo.org for quick checks.'
+  },
+  ruca: {
+    name: 'USDA RUCA Codes — Rural-Urban Classification',
+    agency: 'USDA Economic Research Service (ERS)',
+    url: 'https://www.ers.usda.gov/data-products/rural-urban-commuting-area-codes',
+    apiUrl: 'https://www.ruralhealthinfo.org/am-i-rural',
+    format: 'XLSX (ZIP code and census tract versions)',
+    structure: 'ZIP-to-RUCA mapping. Primary codes 1-10: 1=Metro core, 2-3=Metro commuting, 4=Micro core, 5-6=Micro commuting, 7=Small town core, 8-9=Small town commuting, 10=Rural. Secondary decimal codes for commuting flow detail. Includes population, land area, population density.',
+    frequency: 'Decennial (updated with each Census; current version uses 2020 Census, updated Aug 2025)',
+    records: '~42,000 ZIP codes mapped',
+    access: 'Direct download from USDA ERS — no account needed',
+    cost: 'free',
+    lakeOrg: 'ZIP-to-RUCA lookup table in S3. Joined with NPPES practice addresses for rurality classification.',
+    notes: 'RUCA >= 4 is the standard threshold for "non-urbanized" in RHC eligibility. The WWAMI RHRC (Univ. of Washington) provides an alternative ZIP-RUCA crosswalk. Errata correction issued Dec 2025. For CMS RHC purposes, the Census urbanized area definition is the official standard, but RUCA is the best proxy at ZIP level.'
+  },
+  census_ua: {
+    name: 'Census Bureau Urban Area Boundaries',
+    agency: 'U.S. Census Bureau',
+    url: 'https://www.census.gov/programs-surveys/geography/guidance/geo-areas/urban-rural.html',
+    apiUrl: 'https://geocoding.geo.census.gov/geocoder/',
+    format: 'Shapefile (SHP), TIGER/Line files, Geocoder API',
+    structure: 'Urban area boundary polygons for 2,645 urban areas (2020 Census). Urban areas defined as ≥2,000 housing units or ≥5,000 population. Includes urban area name, type (urbanized area vs. urban cluster), land area, population. Relationship files map census blocks to urban areas.',
+    frequency: 'Decennial (2020 Census boundaries; next update after 2030 Census)',
+    records: '2,645 urban areas defined',
+    access: 'Direct download from Census TIGER/Line. Geocoder API is free — no key needed.',
+    cost: 'free',
+    lakeOrg: 'Urban area shapefiles in S3. Point-in-polygon lookups to flag each practice address as urbanized or non-urbanized.',
+    notes: 'CMS uses the Census urbanized area definition as the official test for RHC rural eligibility — a practice must NOT be in an urbanized area. The Census Geocoder can geocode an address to a census block, which can then be checked against urban area boundaries. TIGER/Line shapefiles are large but well-documented.'
   },
   medicare_util: {
     name: 'Medicare Physician Utilization & Payment',
