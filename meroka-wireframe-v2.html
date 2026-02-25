@@ -65,7 +65,7 @@ h1 { font-size: 20px; font-weight: 700; color: #111; }
 .src-item {
   padding: 5px 10px; font-size: 10px; display: flex; align-items: center;
   justify-content: space-between; border-bottom: 1px solid #f5f5f5;
-  cursor: default; transition: opacity 0.2s, background 0.15s;
+  cursor: pointer; transition: opacity 0.2s, background 0.15s;
 }
 .src-item:last-child { border-bottom: none; }
 .src-item:hover { background: #f8f9ff; }
@@ -221,6 +221,83 @@ h1 { font-size: 20px; font-weight: 700; color: #111; }
 }
 .proj-type-badge.external { background: #eef2ff; color: #4f46e5; border: 1px solid #c7d2fe; }
 .proj-type-badge.internal { background: #f3f4f6; color: #6b7280; border: 1px solid #d1d5db; }
+
+/* Source detail card */
+.source-overlay {
+  display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.25); z-index: 200;
+  justify-content: center; align-items: flex-start; padding: 40px 24px;
+}
+.source-overlay.open { display: flex; }
+.source-panel {
+  background: #fff; border-radius: 14px; width: 520px; max-height: calc(100vh - 80px);
+  overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.2), 0 0 0 1px rgba(0,0,0,0.05);
+  transform: translateY(12px) scale(0.97); opacity: 0;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+.source-overlay.open .source-panel {
+  transform: translateY(0) scale(1); opacity: 1;
+}
+.src-card-header {
+  padding: 20px 24px 14px; border-bottom: 1px solid #eee;
+  display: flex; align-items: flex-start; gap: 12px; position: sticky; top: 0;
+  background: #fff; border-radius: 14px 14px 0 0; z-index: 1;
+}
+.src-card-header-info { flex: 1; }
+.src-card-title {
+  font-size: 16px; font-weight: 800; color: #111; display: flex; align-items: center; gap: 8px;
+}
+.src-card-agency {
+  font-size: 9px; font-weight: 600; color: #888; margin-top: 4px;
+}
+.src-card-body { padding: 16px 24px 24px; }
+.src-card-row {
+  display: flex; gap: 8px; margin-bottom: 14px;
+}
+.src-card-label {
+  font-size: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px;
+  color: #999; width: 80px; flex-shrink: 0; padding-top: 2px;
+}
+.src-card-value {
+  font-size: 10px; color: #333; line-height: 1.6; flex: 1;
+}
+.src-card-value a {
+  color: #4f46e5; text-decoration: none; border-bottom: 1px dashed #c7d2fe;
+  word-break: break-all;
+}
+.src-card-value a:hover { color: #6366f1; border-bottom-color: #6366f1; }
+.src-card-pills {
+  display: flex; flex-wrap: wrap; gap: 4px; margin-top: 2px;
+}
+.src-card-pill {
+  padding: 2px 8px; border-radius: 4px; font-size: 8px; font-weight: 700;
+  border: 1px solid #e5e7eb; background: #f9fafb; color: #555;
+}
+.src-card-pill.pill-format { background: #eef2ff; color: #4f46e5; border-color: #c7d2fe; }
+.src-card-pill.pill-free { background: #f0fdf4; color: #16a34a; border-color: #bbf7d0; }
+.src-card-pill.pill-paid { background: #fef3c7; color: #b45309; border-color: #fde68a; }
+.src-card-pill.pill-restricted { background: #fef2f2; color: #dc2626; border-color: #fecaca; }
+.src-card-note {
+  font-size: 9px; color: #666; line-height: 1.6; padding: 8px 10px;
+  background: #fafbfc; border-radius: 6px; border: 1px solid #f0f0f0; margin-top: 2px;
+}
+.src-card-divider {
+  height: 1px; background: #f0f0f0; margin: 4px 0 14px;
+}
+.src-card-stat-row {
+  display: flex; gap: 8px; margin-bottom: 14px;
+}
+.src-card-stat {
+  flex: 1; padding: 8px 10px; border-radius: 6px; border: 1px solid #f0f0f0;
+  text-align: center;
+}
+.src-card-stat-val {
+  font-size: 13px; font-weight: 800; color: #111;
+}
+.src-card-stat-label {
+  font-size: 7px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px;
+  color: #999; margin-top: 2px;
+}
 
 /* Detail panel overlay */
 .detail-overlay {
@@ -669,6 +746,11 @@ svg.lines { position: absolute; top: 0; left: 0; pointer-events: none; z-index: 
     </div>
     <div class="backlog-list" id="backlog-list"></div>
   </div>
+</div>
+
+<!-- Source detail overlay -->
+<div class="source-overlay" id="source-overlay">
+  <div class="source-panel" id="source-panel"></div>
 </div>
 
 <!-- Project detail overlay -->
@@ -2056,6 +2138,403 @@ document.querySelectorAll('.field').forEach(f => {
   f.addEventListener('mouseleave', () => { if (!formActive && !impactLocked) resetAll(); });
 });
 
+// ── Source Card Data ──
+
+const SOURCE_CARDS = {
+  nppes: {
+    name: 'NPPES — National Plan & Provider Enumeration System',
+    agency: 'Centers for Medicare & Medicaid Services (CMS)',
+    url: 'https://download.cms.gov/nppes/NPI_Files.html',
+    apiUrl: 'https://npiregistry.cms.hhs.gov/api/?version=2.1',
+    format: 'CSV (bulk ~9 GB uncompressed), JSON API',
+    structure: 'One row per NPI. 330+ columns: NPI, entity type, provider name, addresses, up to 15 taxonomy codes, enumeration/deactivation dates, authorized official fields.',
+    frequency: 'Monthly (full file), Weekly (incremental)',
+    records: '~8–9 million NPIs',
+    access: 'Direct download — no account or API key required',
+    cost: 'free',
+    lakeOrg: 'Partitioned by state, indexed on NPI. Raw CSV → Parquet in lake.',
+    notes: 'File too large for Excel. API max 200 results/query (lookup only, not bulk). Deactivated NPIs remain in file. Version 2 effective 03/2026 with extended field lengths.'
+  },
+  pecos: {
+    name: 'CMS PECOS — Provider Enrollment, Chain & Ownership',
+    agency: 'Centers for Medicare & Medicaid Services (CMS)',
+    url: 'https://data.cms.gov/provider-characteristics/medicare-provider-supplier-enrollment/medicare-fee-for-service-public-provider-enrollment',
+    format: 'CSV, API (data.cms.gov)',
+    structure: 'Enrollment records: NPI, legal name, enrollment type, provider specialty, reassignment info, practice location (city/state/ZIP).',
+    frequency: 'Quarterly',
+    records: '~1.5–2 million enrolled providers',
+    access: 'Direct download — no account needed',
+    cost: 'free',
+    lakeOrg: 'Quarterly snapshots in Parquet, keyed on NPI + enrollment type.',
+    notes: 'Subset of full PECOS data. Only city/state/ZIP (no street addresses). Reflects actual Medicare enrollment status, not just NPI registration.'
+  },
+  pos: {
+    name: 'CMS Provider of Services File',
+    agency: 'Centers for Medicare & Medicaid Services (CMS)',
+    url: 'https://data.cms.gov/provider-characteristics/hospitals-and-other-facilities/provider-of-services-file-hospital-non-hospital-facilities',
+    format: 'CSV, JSON API',
+    structure: 'One record per Medicare-certified provider (CCN). Certification info, ownership type, bed size, accreditation, teaching status, services. 3 files: Hospital/Non-Hospital, CLIA labs, iQIES (HHA/ASC/Hospice).',
+    frequency: 'Quarterly',
+    records: '~100K providers + 300K labs',
+    access: 'Direct download — no account needed',
+    cost: 'free',
+    lakeOrg: 'Quarterly snapshots keyed on CCN. Joined with NPPES for NPI cross-reference.',
+    notes: 'Point-in-time snapshot file. iQIES split from "OTHER" in Q4 2023. CMS retiring SAS format after April 2026.'
+  },
+  hrsa: {
+    name: 'HRSA — Federally Qualified Health Centers',
+    agency: 'Health Resources & Services Administration (HRSA)',
+    url: 'https://data.hrsa.gov/data/download',
+    apiUrl: 'https://data.hrsa.gov/data/reports/datagrid?gridName=FQHCs',
+    format: 'XLSX, CSV, ASCII, SAS',
+    structure: 'Health center org-level data: name, address, grant number, FQHC designation, services. UDS tables: patient demographics, clinical measures, staffing, financials, utilization.',
+    frequency: 'Annually (UDS), rolling (site listings)',
+    records: '~1,400 orgs / 15,000+ sites / 32M patients',
+    access: 'Direct download. Granular UDS data may require FOIA.',
+    cost: 'free',
+    lakeOrg: 'Annual UDS snapshots + site-level records partitioned by state.',
+    notes: 'UDS data has 6-12 month lag. Not all HRSA sites are CMS-certified FQHCs. HRSA Geospatial Warehouse provides geocoded locations.'
+  },
+  medicare_util: {
+    name: 'Medicare Physician Utilization & Payment',
+    agency: 'Centers for Medicare & Medicaid Services (CMS)',
+    url: 'https://data.cms.gov/provider-summary-by-type-of-service/medicare-physician-other-practitioners',
+    format: 'Tab-delimited CSV, JSON API',
+    structure: 'One row per NPI × HCPCS × place of service. Provider demographics, utilization counts (services, beneficiaries), payment data (submitted charges, allowed amounts, Medicare payments).',
+    frequency: 'Annually (1-2 year lag)',
+    records: '~10M+ rows/year',
+    access: 'Direct download — no account needed',
+    cost: 'free',
+    lakeOrg: 'Annual partitions. Provider-level and service-level aggregations in warehouse.',
+    notes: 'Medicare Fee-For-Service only — no Medicare Advantage, Medicaid, or commercial. Records with <11 beneficiaries are suppressed. CPT codes copyrighted by AMA.'
+  },
+  tic: {
+    name: 'Transparency in Coverage (TiC) Machine-Readable Files',
+    agency: 'Mandated by CMS / HHS / DOL — published by each health insurer',
+    url: 'https://github.com/CMSgov/price-transparency-guide',
+    format: 'JSON (compressed .gz/.zip) — terabyte-scale',
+    structure: 'Per insurer: In-Network Rate Files (negotiated rates by NPI × CPT × place of service), Allowed Amount Files (out-of-network), Prescription Drug Files. Linked by Table of Contents JSON.',
+    frequency: 'Monthly (required by regulation)',
+    records: 'Billions of rate records across all insurers',
+    access: 'Free HTTPS download from each insurer\'s site. No central registry.',
+    cost: 'free',
+    lakeOrg: 'Streaming JSON parse (ijson). Normalized to NPI × CPT rate rows in Parquet. Partitioned by insurer and state.',
+    notes: 'Files are massive (single insurer can be 2+ TB). Requires streaming JSON parsers. Data quality varies by insurer. Schema 2.0 effective Feb 2026. Third-party aggregators: Serif Health, Turquoise Health.'
+  },
+  fair_health: {
+    name: 'FAIR Health — National Private Insurance Claims',
+    agency: 'FAIR Health, Inc. (independent nonprofit, est. 2009)',
+    url: 'https://www.fairhealth.org/',
+    apiUrl: 'https://www.fairhealthconsumer.org/',
+    format: 'Licensed REST API (JSON)',
+    structure: 'Cost benchmarks by CPT/HCPCS code × 3-digit ZIP ("geozip") × percentile. Charge benchmarks (what providers bill) and allowed benchmarks (what insurers pay). 15,000+ procedure codes.',
+    frequency: 'Semi-annual benchmark updates',
+    records: '57B+ commercial + 53B+ Medicare claim records, ~150M lives',
+    access: 'License agreement required. Contact service@fairhealth.org',
+    cost: 'paid',
+    lakeOrg: 'API responses cached in warehouse by CPT × geozip. Refreshed semi-annually.',
+    notes: 'Not publicly accessible in bulk. NCQA-certified. Covers ~75% of privately insured U.S. population. Data back to 2002. Heavily used in litigation and out-of-network reimbursement.'
+  },
+  meps: {
+    name: 'MEPS — Medical Expenditure Panel Survey',
+    agency: 'Agency for Healthcare Research & Quality (AHRQ)',
+    url: 'https://meps.ahrq.gov/data_stats/download_data_files.jsp',
+    format: 'SAS, Stata, ASCII, XLSX',
+    structure: 'Household Component: person-level data (1,400+ variables) — demographics, conditions, insurance, utilization, expenditures. Sub-files: office visits, ER, inpatient, prescriptions, dental.',
+    frequency: 'Annually (~2 year lag)',
+    records: '~22K–35K persons/year (nationally representative)',
+    access: 'Direct download. Restricted files require AHRQ Data Center access.',
+    cost: 'free',
+    lakeOrg: 'Annual person-level files with survey weights preserved. Event files linked by DUPERSID.',
+    notes: 'Survey data — must use provided weights for national estimates. Civilian noninstitutionalized population only. Variable names can change across years.'
+  },
+  rand: {
+    name: 'RAND / Sage Transparency — Hospital Pricing',
+    agency: 'RAND Corporation + Employer Price Transparency Project',
+    url: 'https://employerptp.org/sage-transparency/',
+    apiUrl: 'https://www.hospitaldatasets.org/',
+    format: 'Web dashboard (Tableau), CSV (HCRIS data)',
+    structure: 'Hospital-level commercial prices as % of Medicare. Inpatient/outpatient/professional breakdowns. HCRIS: ~1,500 fields from CMS cost reports (revenue, cost, utilization, charges).',
+    frequency: 'Quarterly (HCRIS), biennial (study rounds)',
+    records: '4,000+ hospitals, 2,000+ ASCs',
+    access: 'Sage browsing free. Data purchasable. HCRIS freely downloadable.',
+    cost: 'free',
+    lakeOrg: 'HCRIS quarterly imports keyed on provider number. Sage benchmarks as supplementary reference table.',
+    notes: 'Headline finding: commercial insurers pay ~254% of Medicare rates. Sage data from employer claims + state APCDs — not all payers. Study round 6 expected Sept 2027.'
+  },
+  mips: {
+    name: 'MIPS / QPP — Quality Payment Program',
+    agency: 'Centers for Medicare & Medicaid Services (CMS)',
+    url: 'https://qpp.cms.gov/',
+    apiUrl: 'https://data.cms.gov/provider-data/search?keyword=MIPS',
+    format: 'CSV, JSON API (no key required)',
+    structure: 'Per clinician-group: Final Score, Quality/Cost/Promoting Interoperability/Improvement Activities scores. Measures file: one row per clinician × measure with detailed performance.',
+    frequency: 'Annually (~18 month lag)',
+    records: '~700K–900K clinician records',
+    access: 'Direct download from data.cms.gov — no account needed',
+    cost: 'free',
+    lakeOrg: 'Annual snapshots keyed on NPI × TIN. Score history table for longitudinal tracking.',
+    notes: 'PY2023 is most recent public data. Payment adjustments range -9% to +9%. Transitioning toward MIPS Value Pathways (MVPs). Not all clinicians are MIPS-eligible.'
+  },
+  care_compare: {
+    name: 'CMS Care Compare — Provider Data Catalog',
+    agency: 'Centers for Medicare & Medicaid Services (CMS)',
+    url: 'https://data.cms.gov/provider-data/',
+    apiUrl: 'https://www.medicare.gov/care-compare/',
+    format: 'CSV (bulk), JSON API (no key, 1,000 rows/request)',
+    structure: 'Datasets by type: Hospitals (quality, HCAHPS, infections, readmissions), Nursing Homes (inspections, staffing, penalties), Doctors (MIPS, affiliations), Home Health, Hospice, Dialysis.',
+    frequency: 'Quarterly (most datasets)',
+    records: '~5K hospitals, ~15K nursing homes, ~1.3M clinicians',
+    access: 'Direct download + API — no registration needed',
+    cost: 'free',
+    lakeOrg: 'Quarterly snapshots per provider type. Hospital and clinician tables joined with NPPES/PECOS.',
+    notes: 'Replaced legacy Hospital Compare / Physician Compare. API returns max 1,000 rows (use offset pagination). Data dictionaries are PDFs — critical for field understanding.'
+  },
+  leapfrog: {
+    name: 'Leapfrog Hospital Safety Grades',
+    agency: 'The Leapfrog Group (independent nonprofit)',
+    url: 'https://www.hospitalsafetygrade.org/',
+    format: 'Web lookup (free), Excel/API (licensed)',
+    structure: 'Letter grade (A–F) per hospital + 32 underlying safety measures: infections, PSI-90 composite, practices to prevent errors. Sourced from Leapfrog Survey, AHRQ, CDC, CMS.',
+    frequency: 'Semi-annual (Spring + Fall)',
+    records: '~3,000 general acute care hospitals',
+    access: 'Free public lookup. Enterprise: subscription for bulk data + API via The Hopper.',
+    cost: 'paid',
+    lakeOrg: 'Semi-annual grade snapshots per hospital. Historical grade tracking for trend analysis.',
+    notes: 'Only general acute care hospitals (excludes VA, critical access, specialty, children\'s). Only 12% of hospitals sustained an "A" for 5+ consecutive rounds. Methodology is publicly downloadable.'
+  },
+  med_boards: {
+    name: 'State Medical Boards (FSMB)',
+    agency: 'Federation of State Medical Boards + 50 individual state boards',
+    url: 'https://www.fsmb.org/PDC/',
+    format: 'REST API (JSON), bulk data files',
+    structure: 'Standard profile: biographical info, license history (all states), education, national IDs (NPI, DEA). Premium: adds ABMS board certification. Bulk files for sanctions and licensing.',
+    frequency: 'Monthly (licensure & disciplinary updates)',
+    records: '1M+ physician and PA profiles',
+    access: 'Account required. Email pdc@fsmb.org for API credentials.',
+    cost: 'paid',
+    lakeOrg: 'Monthly license snapshots keyed on NPI. Sanction events as append-only log.',
+    notes: '$9/physician (standard), $12 (premium). Only centralized multi-state source. NCQA-certified primary-source verification. Only MDs, DOs, and PAs — no nurses/pharmacists. Free state-by-state lookups exist but require 50+ separate systems.'
+  },
+  website: {
+    name: 'Practice Websites (Web Scraping)',
+    agency: 'Self-published by individual medical practices',
+    url: null,
+    format: 'Unstructured HTML, occasional Schema.org JSON-LD',
+    structure: 'Provider names, specialties, credentials, bios, office locations, phone, hours, accepted insurance, services, conditions treated, appointment links, ownership info.',
+    frequency: 'Varies (weeks to years per site)',
+    records: '~250K+ medical practice websites',
+    access: 'Custom web scrapers (Scrapy, Playwright). Public sites — no auth.',
+    cost: 'free',
+    lakeOrg: 'Scraped HTML stored in object storage. Parsed fields in structured tables by practice.',
+    notes: 'No standardization — every site is different. Common platforms (WordPress, Squarespace) provide some consistency. High maintenance cost: sites change frequently. Respect robots.txt. PE-owned practices may reveal corporate parent in site footer.'
+  },
+  google: {
+    name: 'Google Business Profiles',
+    agency: 'Google (Alphabet Inc.)',
+    url: 'https://developers.google.com/maps/documentation/places/web-service',
+    format: 'REST API (JSON, OAuth/API key)',
+    structure: 'Per listing: name, address, phone, website, hours, category, coordinates, star rating, review count, review text, photos. Healthcare-specific: wheelchair access, languages, insurance accepted, telehealth, provider gender.',
+    frequency: 'Real-time (continuously updated)',
+    records: 'Hundreds of thousands of healthcare listings',
+    access: 'Places API: Google Cloud project + API key. Pay-per-use.',
+    cost: 'paid',
+    lakeOrg: 'API responses cached with TTL. Review snapshots taken monthly. Keyed on Place ID + NPI cross-ref.',
+    notes: 'Places API is the only legal method — scraping prohibited. Field masks critical for cost control (request only needed fields). 77% of patients start healthcare search via Google. GBP Management API only for your own listings.'
+  },
+  healthgrades: {
+    name: 'Healthgrades / Vitals',
+    agency: 'RVO Health (Red Ventures + Optum/UHG) / WebMD (Internet Brands)',
+    url: 'https://www.healthgrades.com/',
+    format: 'No official API — web scraping or third-party services',
+    structure: '3M+ provider profiles: name, specialty, board certs, hospital affiliations, addresses, insurance, ratings (1–5), reviews, experience years, education, conditions/procedures, disciplinary actions. ~4,500 hospital quality evaluations.',
+    frequency: 'Continuous (sourced from NPI Registry, surveys, claims)',
+    records: '3M+ providers, 4,500 hospitals',
+    access: 'Free browse. No official bulk API. Third-party scrapers: Apify, Datashake.',
+    cost: 'restricted',
+    lakeOrg: 'Scraped profiles stored by NPI. Review text and ratings in separate review table.',
+    notes: 'No public API — monetized through advertising. Scraping may violate ToS. Auto-creates profiles for every NPI. Vitals (now under WebMD) has quality concerns (AI-generated photos, suppressed reviews). Parent company Optum creates conflict of interest.'
+  },
+  linkedin: {
+    name: 'LinkedIn',
+    agency: 'LinkedIn Corporation (Microsoft)',
+    url: 'https://www.linkedin.com/',
+    format: 'REST API (JSON, OAuth 2.0) — Partner access only',
+    structure: 'Professional profiles: name, headline, positions (employer, title, dates), education (med school, residency, fellowship), skills, certifications, company pages (employee count, founding date).',
+    frequency: 'Real-time (user-maintained)',
+    records: '1B+ global members, ~1M+ U.S. physicians estimated',
+    access: 'Official API requires LinkedIn Partner approval (extremely restricted). Scraping prohibited with aggressive enforcement.',
+    cost: 'restricted',
+    lakeOrg: 'If obtained: employment history keyed on NPI or name match. Employer transitions flagged for PE acquisition detection.',
+    notes: 'Most legally aggressive platform against scraping. Work history moved behind login wall (late 2025). Valuable for PE-physician relationship detection. Consider ZoomInfo/Apollo as alternative aggregators. Sales Navigator or Recruiter licenses as fallback.'
+  },
+  sos: {
+    name: 'SEC EDGAR + State Secretary of State Filings',
+    agency: 'SEC + 50 State Secretaries of State',
+    url: 'https://www.sec.gov/edgar/',
+    format: 'SEC: REST API (JSON, XBRL). State SoS: HTML/CSV/API (varies)',
+    structure: 'SEC EDGAR: 10-K, 8-K, 13-F, SC 13D filings. Entity metadata: name, SIC code, state of incorporation. State SoS: entity name, type (LLC/Corp), status, formation date, registered agent, officers.',
+    frequency: 'SEC: real-time (~4,700 filings/day). State SoS: daily to monthly.',
+    records: 'SEC: 800K+ entities, 18M+ filings. SoS: tens of millions across all states.',
+    access: 'SEC: free, no key (10 req/sec, User-Agent header required). State SoS: free individual lookup; bulk data $0–$9,500+ per state.',
+    cost: 'free',
+    lakeOrg: 'SEC filings indexed by CIK. State entity records deduplicated by name + registered agent. Cross-referenced to identify PE holding structures.',
+    notes: 'Most healthcare practices are private (not in SEC). SEC useful for PE firms and publicly traded health systems. 8-K filings can reveal practice acquisitions. No federal centralized business registry. Delaware is critical for PE structures but provides minimal public data. OpenCorporates aggregates many states.'
+  },
+  form5500: {
+    name: 'DOL Form 5500 — Employee Benefit Plans',
+    agency: 'U.S. Department of Labor (EBSA)',
+    url: 'https://www.dol.gov/agencies/ebsa/about-ebsa/our-activities/public-disclosure/foia/form-5500-datasets',
+    apiUrl: 'https://www.efast.dol.gov/5500Search/',
+    format: 'Zipped CSV (multi-table relational)',
+    structure: 'Main form + schedule tables linked by ACK_ID. Key fields: plan name, sponsor name/EIN, plan type (pension/welfare), participant count, total assets, contributions, benefits paid, service providers, insurance info.',
+    frequency: 'Annually',
+    records: '~800K plans file annually',
+    access: 'Direct download — no account needed',
+    cost: 'free',
+    lakeOrg: 'Latest-filing extracts keyed on plan sponsor EIN. Joined with employer records for self-funded plan identification.',
+    notes: 'Complex relational structure — join on ACK_ID. Use "Latest" dataset (not "All") to avoid amended duplicates. Self-reported and not audited. Form 5500-EZ (one-participant plans) filed with IRS, not included here.'
+  },
+  gao: {
+    name: 'GAO Market Concentration Reports',
+    agency: 'Government Accountability Office + ASPE/HHS + MedPAC',
+    url: 'https://www.gao.gov/products/gao-25-107450',
+    format: 'PDF reports (no structured dataset)',
+    structure: 'HHI indices for hospital, physician, and insurer markets by MSA. Consolidation trends (47% of physicians with hospitals in 2024, ~6.5% under PE). Price/spending effect estimates from literature review.',
+    frequency: 'Ad hoc (congressional request basis)',
+    records: 'N/A — analytical reports, not row-level data',
+    access: 'Direct download of PDFs — no account needed',
+    cost: 'free',
+    lakeOrg: 'ASPE MSA-level HHI values extracted from PDF tables and stored as reference data.',
+    notes: 'No structured downloadable dataset — findings within PDF reports require manual or PDF-parse extraction. Underlying data (IQVIA, SK&A) is proprietary and expensive. ASPE environmental scan provides best structured HHI by MSA.'
+  },
+  ai_classifier: {
+    name: 'AI Independence Classifier',
+    agency: 'Internal (Meroka)',
+    url: null,
+    format: 'Internal model output (JSON)',
+    structure: 'Per practice: independence classification (Independent / PE-backed / System-Affiliated / FQHC / Academic / Unknown), confidence score, contributing signals, classification date.',
+    frequency: 'Pipeline-defined (batch daily or on-demand)',
+    records: 'Target universe: ~200K+ practices',
+    access: 'Internal API / BigQuery',
+    cost: 'free',
+    lakeOrg: 'Classification results in BigQuery with full signal lineage. Versioned by model iteration.',
+    notes: 'Only as good as upstream sources. Ground truth labels are scarce — PE ownership often not publicly disclosed. Low-confidence results flagged for manual review. Temporal lag: a practice acquired last month may not yet show in public records.'
+  },
+  pe_list: {
+    name: 'Known PE Platforms — Private Equity Tracker',
+    agency: 'PESP (nonprofit), PitchBook (Morningstar), Becker\'s Healthcare',
+    url: 'https://pestakeholder.org/private-equity-hospital-tracker/',
+    format: 'Web dashboard (PESP), proprietary platform (PitchBook)',
+    structure: 'Per PE platform: PE firm, fund, platform name, specialty vertical, location count, geographic footprint, deal type, transaction date. PESP: ~488 hospitals, 420+ platforms, 1,029 deals across 708 firms.',
+    frequency: 'PESP: periodic (last Aug 2025). PitchBook: daily.',
+    records: '488 PE-owned hospitals + 420+ platforms tracked',
+    access: 'PESP: free public web. PitchBook: paid enterprise subscription ($20K–$50K+/yr).',
+    cost: 'free',
+    lakeOrg: 'PE platform reference table with firm/platform/specialty/geography. Updated from PESP + manual curation.',
+    notes: 'No single authoritative PE registry. PE ownership often obscured through holding company layers. Key specialties: dental (132 deals in 2024), behavioral health, dermatology, ophthalmology. Regulatory landscape shifting — 35+ states now require notification of PE healthcare transactions.'
+  },
+  derived: {
+    name: 'Derived & Calculated Fields',
+    agency: 'Internal (Meroka)',
+    url: null,
+    format: 'BigQuery tables / internal API',
+    structure: 'Computed from upstream sources: Price Competitiveness Score, Safety/Quality Composite, Patient Sentiment Score, Independence Score, Provider Completeness Score, Practice Size Estimate, PE Ownership Flag, Geographic Access Metrics.',
+    frequency: 'Aligned with slowest upstream source',
+    records: 'Mirrors entity universe (one per provider/practice)',
+    access: 'Internal BigQuery / API',
+    cost: 'free',
+    lakeOrg: 'Materialized views in BigQuery with source lineage metadata. Versioned by pipeline run.',
+    notes: 'Derived fields inherit upstream limitations. Document all derivation logic and source versions. Combine data with different cadences carefully — timestamp derivations and flag staleness. Verify upstream licenses permit derivative works.'
+  }
+};
+
+let sourcePanelOpen = false;
+
+function openSourceCard(srcId) {
+  const card = SOURCE_CARDS[srcId];
+  if (!card) return;
+  const overlay = document.getElementById('source-overlay');
+  const panel = document.getElementById('source-panel');
+  sourcePanelOpen = true;
+
+  const costLabel = card.cost === 'free' ? 'Free / Public' : card.cost === 'paid' ? 'Paid License' : 'Restricted Access';
+  const costClass = card.cost === 'free' ? 'pill-free' : card.cost === 'paid' ? 'pill-paid' : 'pill-restricted';
+
+  let html = '<div class="src-card-header">';
+  html += '<div class="src-card-header-info">';
+  html += `<div class="src-card-title">${card.name}</div>`;
+  html += `<div class="src-card-agency">${card.agency}</div>`;
+  html += '</div>';
+  html += '<button class="detail-close" onclick="closeSourceCard()">&times;</button>';
+  html += '</div>';
+
+  html += '<div class="src-card-body">';
+
+  // Stat row
+  html += '<div class="src-card-stat-row">';
+  html += `<div class="src-card-stat"><div class="src-card-stat-val">${card.records || 'N/A'}</div><div class="src-card-stat-label">Records</div></div>`;
+  html += `<div class="src-card-stat"><div class="src-card-stat-val">${card.frequency}</div><div class="src-card-stat-label">Update Freq.</div></div>`;
+  html += `<div class="src-card-stat"><div class="src-card-stat-val"><span class="src-card-pill ${costClass}">${costLabel}</span></div><div class="src-card-stat-label">Cost</div></div>`;
+  html += '</div>';
+
+  // URL
+  if (card.url) {
+    html += '<div class="src-card-row">';
+    html += '<div class="src-card-label">URL</div>';
+    html += `<div class="src-card-value"><a href="${card.url}" target="_blank">${card.url}</a></div>`;
+    html += '</div>';
+  }
+  if (card.apiUrl) {
+    html += '<div class="src-card-row">';
+    html += '<div class="src-card-label">API / Alt</div>';
+    html += `<div class="src-card-value"><a href="${card.apiUrl}" target="_blank">${card.apiUrl}</a></div>`;
+    html += '</div>';
+  }
+
+  // Format
+  html += '<div class="src-card-row">';
+  html += '<div class="src-card-label">Format</div>';
+  html += `<div class="src-card-value"><span class="src-card-pill pill-format">${card.format}</span></div>`;
+  html += '</div>';
+
+  // Structure
+  html += '<div class="src-card-row">';
+  html += '<div class="src-card-label">Structure</div>';
+  html += `<div class="src-card-value">${card.structure}</div>`;
+  html += '</div>';
+
+  // Access
+  html += '<div class="src-card-row">';
+  html += '<div class="src-card-label">Access</div>';
+  html += `<div class="src-card-value">${card.access}</div>`;
+  html += '</div>';
+
+  // Lake organization
+  html += '<div class="src-card-divider"></div>';
+  html += '<div class="src-card-row">';
+  html += '<div class="src-card-label">Lake Org</div>';
+  html += `<div class="src-card-value">${card.lakeOrg}</div>`;
+  html += '</div>';
+
+  // Notes
+  if (card.notes) {
+    html += '<div class="src-card-row">';
+    html += '<div class="src-card-label">Notes</div>';
+    html += `<div class="src-card-value"><div class="src-card-note">${card.notes}</div></div>`;
+    html += '</div>';
+  }
+
+  html += '</div>'; // end body
+  panel.innerHTML = html;
+  overlay.classList.add('open');
+}
+
+function closeSourceCard() {
+  document.getElementById('source-overlay').classList.remove('open');
+  sourcePanelOpen = false;
+}
+
 // ── Source hover & click ──
 
 document.querySelectorAll('.src-item').forEach(s => {
@@ -2080,7 +2559,13 @@ document.querySelectorAll('.src-item').forEach(s => {
     });
   });
   s.addEventListener('mouseleave', () => { if (!impactLocked) resetAll(); });
-  s.addEventListener('click', handleImpactClick);
+  s.addEventListener('click', (e) => {
+    if (pipeline.classList.contains('impact-mode')) {
+      handleImpactClick(e);
+    } else {
+      openSourceCard(s.dataset.id);
+    }
+  });
 });
 
 // ── Source group header hover ──
@@ -2115,9 +2600,15 @@ document.querySelectorAll('.sg-header').forEach(h => {
 // ── Keyboard shortcuts ──
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
-    if (detailPanelOpen) closeDetailPanel();
+    if (sourcePanelOpen) closeSourceCard();
+    else if (detailPanelOpen) closeDetailPanel();
     else if (document.getElementById('backlog-overlay').classList.contains('open')) closeBacklog();
   }
+});
+
+// ── Click outside to close source card ──
+document.getElementById('source-overlay').addEventListener('click', (e) => {
+  if (e.target === document.getElementById('source-overlay')) closeSourceCard();
 });
 
 window.addEventListener('load', () => {
