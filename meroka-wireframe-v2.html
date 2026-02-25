@@ -187,6 +187,37 @@ h1 { font-size: 20px; font-weight: 700; color: #111; }
 .f-employer { background: #fef; border-color: #dad; color: #636; }
 .f-rural { background: #e8faf0; border-color: #a3d9bc; color: #1a5632; }
 .f-legal { background: #e8eaf6; border-color: #9fa8da; color: #283593; }
+
+/* Affiliations tab */
+.affil-tier { margin-bottom: 16px; }
+.affil-tier-label {
+  font-size: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.8px;
+  color: #999; margin-bottom: 8px; padding-bottom: 4px; border-bottom: 1px solid #f0f0f0;
+}
+.affil-card {
+  padding: 8px 10px; border: 1px solid #e5e7eb; border-radius: 6px;
+  margin-bottom: 6px; cursor: default; transition: all 0.15s; position: relative;
+}
+.affil-card:hover { border-color: #c7d2fe; background: #fafbff; }
+.affil-card:hover .affil-contact { display: block; }
+.affil-name { font-size: 10px; font-weight: 700; color: #111; }
+.affil-why { font-size: 9px; color: #666; line-height: 1.5; margin-top: 2px; }
+.affil-status {
+  display: inline-block; font-size: 7px; font-weight: 700; padding: 1px 6px;
+  border-radius: 4px; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.3px;
+}
+.affil-status.as-target { background: #f3f4f6; color: #6b7280; border: 1px solid #d1d5db; }
+.affil-status.as-outreach { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+.affil-status.as-affiliated { background: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; }
+.affil-contact {
+  display: none; margin-top: 6px; padding: 6px 8px; background: #f8f9ff; border-radius: 4px;
+  border: 1px solid #e8eaf6; font-size: 8px; color: #444; line-height: 1.6;
+}
+.affil-contact a {
+  color: #4f46e5; text-decoration: none; border-bottom: 1px dashed #c7d2fe;
+  word-break: break-all;
+}
+.affil-contact a:hover { color: #6366f1; border-bottom-color: #6366f1; }
 .f-technology { background: #eef; border-color: #aac; color: #336; }
 
 /* Heatmap mode */
@@ -1189,6 +1220,31 @@ const PROJECTS = [
         { from:'bigquery', to:'output', label:'SQL queries' }
       ]
     },
+    affiliations: [
+      { tier: 'Research & Data Credibility', items: [
+        { name: 'Massachusetts Medical Society', status: 'target', why: 'Publishes the New England Journal of Medicine. An MA-based partnership on your POC data is the closest parallel to Open Evidence\'s playbook.', contact: 'Partnership inquiries: partnerships@mms.org | Main: https://www.massmed.org | 860 Winter St, Waltham, MA 02451 | (781) 434-7000' },
+        { name: 'Harvard T.H. Chan School of Public Health', status: 'target', why: 'Health economics faculty already study independent vs. system pricing. Affiliation means your data model has academic rigor.', contact: 'Health Policy & Management dept: https://www.hsph.harvard.edu/health-policy-and-management/ | Research partnerships: https://www.hsph.harvard.edu/research/ | (617) 432-1000' },
+        { name: 'Dartmouth Institute for Health Policy', status: 'target', why: 'Pioneers of healthcare variation research. Their brand says "this data is methodologically sound."', contact: 'https://tdi.dartmouth.edu | Research inquiries: tdi@dartmouth.edu | (603) 646-6674' },
+        { name: 'RAND Corporation', status: 'target', why: 'Already publishes hospital pricing study (commercial = 254% of Medicare). If RAND validated your independent practice pricing data, instant authority.', contact: 'Health Care program: https://www.rand.org/health.html | Media: media@rand.org | (310) 393-0411' },
+        { name: 'Commonwealth Fund', status: 'target', why: 'Publishes market concentration analysis. Would amplify the consolidation angle.', contact: 'https://www.commonwealthfund.org | info@cmwf.org | (212) 606-3800' }
+      ]},
+      { tier: 'Independent Practice Advocacy', items: [
+        { name: 'American Medical Association (AMA)', status: 'target', why: 'Actively advocates against consolidation, publishes physician practice benchmarking. AMA endorsement = every independent doc pays attention.', contact: 'Practice transformation: https://www.ama-assn.org/practice-management | Partnerships: https://www.ama-assn.org/about/partnerships | (800) 621-8335' },
+        { name: 'Physicians Advocacy Institute', status: 'target', why: 'Literally tracks physician practice acquisitions by hospitals and PE. Your data feeds their mission directly.', contact: 'https://www.physiciansadvocacyinstitute.org | info@physadvocacy.org' },
+        { name: 'AOSSM (Sports Medicine)', status: 'target', why: 'American Orthopaedic Society for Sports Medicine — your POC is sports medicine. If they co-sign your data, every sports med practice sees it.', contact: 'https://www.sportsmed.org | aossm@aossm.org | (847) 292-4900 | 9400 W. Higgins Rd, Suite 300, Rosemont, IL 60018' }
+      ]},
+      { tier: 'Employer & Purchaser Groups', items: [
+        { name: 'National Alliance of Healthcare Purchaser Coalitions', status: 'target', why: 'Represents the self-insured employers you\'re selling to. Their endorsement = "employers trust this data."', contact: 'https://www.nationalalliancehealth.org | info@nationalalliancehealth.org | (202) 775-9300' },
+        { name: 'Employers\' Forum of Indiana', status: 'target', why: 'Funded the RAND hospital pricing study. Already bought in on price transparency for employers.', contact: 'https://employersforum.org | Employer PTP project: https://employerptp.org | info@employersforum.org' },
+        { name: 'Leapfrog Group', status: 'target', why: 'Employer-driven quality transparency. Validates your quality signals layer (L3).', contact: 'https://www.leapfroggroup.org | info@leapfroggroup.org | (202) 292-6713' },
+        { name: 'Pacific Business Group on Health', status: 'target', why: 'Large employer coalition, aggressive on direct contracting and VBC arrangements.', contact: 'https://www.pbgh.org | info@pbgh.org | (415) 281-8660' }
+      ]},
+      { tier: 'Policy & Quality Validation', items: [
+        { name: 'MA Health Policy Commission', status: 'target', why: 'Already publishes MA cost/quality data. A partnership on your MA POC would be natural — mutual interest.', contact: 'https://www.mass.gov/orgs/health-policy-commission | HPC.Inquiries@mass.gov | (617) 979-1400' },
+        { name: 'NCQA', status: 'target', why: 'If your composite quality tier methodology was NCQA-reviewed, that\'s a stamp of approval on your quality layer.', contact: 'https://www.ncqa.org | customersupport@ncqa.org | (888) 275-7585' },
+        { name: 'MedPAC', status: 'target', why: 'If they cited your data in their annual report to Congress — gold standard for policy influence.', contact: 'https://www.medpac.gov | (202) 220-3700 | 425 I Street NW, Suite 701, Washington DC 20001' }
+      ]}
+    ],
     get allFields() {
       const s = new Set();
       this.workflows.forEach(w => w.fields.forEach(f => s.add(f)));
@@ -1238,6 +1294,26 @@ const PROJECTS = [
         desc: 'Combine all signals into a composite RHC eligibility score: rural flag (pass/fail), shortage area (pass/fail), CLIA status (pass/fail), payer mix (% government). Rank practices by readiness. Estimate revenue uplift from RHC cost-based reimbursement vs current fee schedule.',
         fields: ['npi','practice_name','specialty','address','providers','provider_count','ruca_code','rurality_tier','hpsa_flag','mua_flag','clia_status','dual_eligible_pct','rhc_eligibility_score','medicare_allowed_amt','est_annual_revenue','payer_mix_estimate','facility_type_flag','fqhc_flag']
       }
+    ],
+    affiliations: [
+      { tier: 'Federal & Rural Health Policy', items: [
+        { name: 'HRSA Federal Office of Rural Health Policy (FORHP)', status: 'target', why: 'The federal agency that defines rural health designations and funds rural health programs. If FORHP uses your classifier, it becomes the reference standard.', contact: 'https://www.hrsa.gov/rural-health | FORHP director office: (301) 443-0835 | 5600 Fishers Lane, Rockville, MD 20857' },
+        { name: 'National Rural Health Association (NRHA)', status: 'target', why: 'Largest rural health membership org (~21,000 members). Their endorsement reaches every rural practice and rural hospital in the country.', contact: 'https://www.ruralhealth.us | mail@nrharural.org | (816) 756-3140 | 4501 College Blvd #225, Leawood, KS 66211' },
+        { name: 'National Association of Rural Health Clinics (NARHC)', status: 'target', why: 'The trade association for RHCs specifically. If your classifier helps their members, that\'s direct value to their constituency.', contact: 'https://www.narhc.org | info@narhc.org | (866) 306-1961' }
+      ]},
+      { tier: 'Research & Academic', items: [
+        { name: 'RUPRI Center for Rural Health Policy Analysis', status: 'target', why: 'University of Iowa — leading rural health policy research center. Would validate your eligibility classification methodology.', contact: 'https://rupri.public-health.uiowa.edu | (319) 384-3831 | University of Iowa College of Public Health' },
+        { name: 'UNC Cecil G. Sheps Center for Health Services Research', status: 'target', why: 'Maintains the definitive rural hospital closures tracking program. Your data complements their mission of monitoring rural healthcare access.', contact: 'https://www.shepscenter.unc.edu | (919) 966-5011 | 725 MLK Jr. Blvd, Chapel Hill, NC 27599' },
+        { name: 'WWAMI Rural Health Research Center (Univ. of Washington)', status: 'target', why: 'Created the ZIP-code RUCA crosswalk your classifier uses. Natural partnership — they built the foundation, you built the application.', contact: 'https://familymedicine.uw.edu/rhrc/ | (206) 685-0402 | UW Dept of Family Medicine, Seattle, WA' }
+      ]},
+      { tier: 'State & Provider Associations', items: [
+        { name: 'Massachusetts Health & Hospital Association', status: 'target', why: 'Represents MA hospitals and health systems including rural/critical access. Your POC state — direct access to facilities that could benefit from RHC designation.', contact: 'https://www.mhalink.org | (781) 272-8000 | 500 District Ave, Burlington, MA 01803' },
+        { name: 'National Organization of State Offices of Rural Health (NOSORH)', status: 'target', why: 'Coordinates all 50 State Offices of Rural Health. Single relationship unlocks state-by-state distribution.', contact: 'https://nosorh.org | info@nosorh.org | (202) 560-0190' }
+      ]},
+      { tier: 'Quality & Accreditation', items: [
+        { name: 'Joint Commission (RHC Accreditation Program)', status: 'target', why: 'Launched a specific RHC Accreditation Program. If your readiness score aligns with their standards, that\'s a credentialing pipeline.', contact: 'https://www.jointcommission.org/en-us/accreditation/rural-health-clinics/ | (630) 792-5000 | One Renaissance Blvd, Oakbrook Terrace, IL 60181' },
+        { name: 'National Committee for Quality Assurance (NCQA)', status: 'target', why: 'If your RHC readiness methodology was NCQA-reviewed, it becomes a quality stamp for rural practices pursuing RHC certification.', contact: 'https://www.ncqa.org | customersupport@ncqa.org | (888) 275-7585' }
+      ]}
     ],
     get allFields() {
       const s = new Set();
@@ -1502,7 +1578,8 @@ function openDetailPanel(proj) {
   const pct = sources.length > 0 ? Math.round((integrated / sources.length) * 100) : 0;
   const hasArch = proj.architecture && proj.architecture.nodes;
   const hasPhases = proj.phases && proj.phases.length > 0;
-  const hasTabs = hasArch || hasPhases;
+  const hasAffil = proj.affiliations && proj.affiliations.length > 0;
+  const hasTabs = hasArch || hasPhases || hasAffil;
 
   let html = '';
 
@@ -1527,6 +1604,7 @@ function openDetailPanel(proj) {
     html += '<button class="detail-tab active" onclick="switchDetailTab(this,\'tab-intel\')">Intelligence</button>';
     if (hasPhases) html += '<button class="detail-tab" onclick="switchDetailTab(this,\'tab-phases\')">Phases</button>';
     if (hasArch) html += '<button class="detail-tab" onclick="switchDetailTab(this,\'tab-arch\')">Architecture</button>';
+    if (hasAffil) html += '<button class="detail-tab" onclick="switchDetailTab(this,\'tab-affil\')">Affiliations</button>';
     html += '</div>';
   }
 
@@ -1622,6 +1700,13 @@ function openDetailPanel(proj) {
     html += '</div>';
   }
 
+  // ── Affiliations tab ──
+  if (hasAffil) {
+    html += '<div class="detail-tab-content" id="tab-affil">';
+    html += renderAffiliations(proj.affiliations);
+    html += '</div>';
+  }
+
   html += '</div>'; // end detail-panel-body
   panel.innerHTML = html;
   overlay.classList.add('open');
@@ -1706,6 +1791,28 @@ function renderPhases(phases) {
       html += '</div>';
     });
     html += '</div></div>';
+  });
+  return html;
+}
+
+function renderAffiliations(affiliations) {
+  let html = '';
+  affiliations.forEach(tier => {
+    html += '<div class="affil-tier">';
+    html += `<div class="affil-tier-label">${tier.tier}</div>`;
+    tier.items.forEach(item => {
+      const statusClass = item.status === 'affiliated' ? 'as-affiliated' : item.status === 'outreach' ? 'as-outreach' : 'as-target';
+      const statusLabel = item.status === 'affiliated' ? 'Affiliated' : item.status === 'outreach' ? 'In Outreach' : 'Target';
+      html += `<div class="affil-card">
+        <div style="display:flex;align-items:center;gap:6px;">
+          <div class="affil-name">${item.name}</div>
+          <span class="affil-status ${statusClass}">${statusLabel}</span>
+        </div>
+        <div class="affil-why">${item.why}</div>
+        <div class="affil-contact">${item.contact.replace(/(https?:\/\/[^\s|,]+)/g, '<a href="$1" target="_blank">$1</a>').replace(/\|/g, '<br>')}</div>
+      </div>`;
+    });
+    html += '</div>';
   });
   return html;
 }
