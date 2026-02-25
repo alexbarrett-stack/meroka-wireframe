@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Meroka — Data Architecture Pipeline</title>
+<title>Meroka — Intelligence Platform</title>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { background: #fafbfc; font-family: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif; overflow-x: auto; }
@@ -788,8 +788,8 @@ svg.lines { position: absolute; top: 0; left: 0; pointer-events: none; z-index: 
 </head>
 <body>
 <div class="header">
-  <h1>Meroka Data Architecture</h1>
-  <p class="subtitle">Practice Intelligence Pipeline &mdash; every field traced to its data source</p>
+  <h1>Meroka</h1>
+  <p class="subtitle">Healthcare intelligence built on full-stack public data lineage</p>
   <div class="status-controls">
     <button class="status-btn" id="btn-completed" onclick="toggleCompleted()">Completed</button>
     <button class="status-btn" id="btn-backlog" onclick="toggleBacklog()">Backlog</button>
@@ -1062,7 +1062,7 @@ svg.lines { position: absolute; top: 0; left: 0; pointer-events: none; z-index: 
 
 <!-- ===== PROJECTS ===== -->
 <div class="stage projects-stage" id="projects-stage">
-  <div class="stage-label">Projects / Experiments</div>
+  <div class="stage-label">Products</div>
   <div id="projects-container"></div>
 </div>
 
@@ -1473,7 +1473,7 @@ function applyFieldAnnotations() {
         tip += `${pn}: ${wfs.join(', ')}<br>`;
       });
     } else {
-      tip += '<strong>Unused</strong> — no project references this field';
+      tip += '<strong>Unused</strong> — no product references this field';
     }
     tip += `<br>Sources: ${srcs.join(', ')}`;
     if (srcs.length === 1) tip += '<br><span style="color:#fca5a5">Single-source risk</span>';
@@ -1496,7 +1496,7 @@ function renderProjects() {
   placeholder.className = 'proj-box proj-placeholder';
   placeholder.id = 'new-project-trigger';
   placeholder.style.cssText = 'border-color:#e0e0e0; cursor:pointer;';
-  placeholder.innerHTML = '<div class="proj-name" style="color:#ccc;">+ New Project</div><div class="proj-desc" style="color:#ddd; font-style:italic;">Define fields &amp; sources</div>';
+  placeholder.innerHTML = '<div class="proj-name" style="color:#ccc;">+ New Product</div><div class="proj-desc" style="color:#ddd; font-style:italic;">Define fields &amp; sources</div>';
   placeholder.addEventListener('click', openCreateForm);
   container.appendChild(placeholder);
 
@@ -2009,7 +2009,7 @@ function handleImpactClick(e) {
     <div class="insight-stat"><span class="insight-num" style="color:#ef4444">${srcName}</span><span class="insight-label">Blast Radius</span></div>
     <div class="insight-stat"><span class="insight-num">${blast.fields.length}</span><span class="insight-label">fields<br>affected</span></div>
     <div class="insight-stat"><span class="insight-num">${blast.workflows.length}</span><span class="insight-label">workflows<br>affected</span></div>
-    <div class="insight-stat"><span class="insight-num">${blast.projects.length}</span><span class="insight-label">projects<br>affected</span></div>
+    <div class="insight-stat"><span class="insight-num">${blast.projects.length}</span><span class="insight-label">products<br>affected</span></div>
     <div style="font-size:9px;color:#94a3b8;margin-left:auto;">Click source again to deselect</div>
   `;
   bar.classList.add('open');
@@ -2145,7 +2145,7 @@ function openCreateForm() {
   trigger.innerHTML = `
     <div class="proj-form">
       <div class="form-group">
-        <label>Project Name</label>
+        <label>Product Name</label>
         <input type="text" id="form-name" placeholder="e.g. Provider Analytics">
       </div>
       <div class="form-group">
@@ -2157,7 +2157,7 @@ function openCreateForm() {
       </div>
       <div class="form-group">
         <label>Objective</label>
-        <textarea id="form-objective" placeholder="Describe the project goal..."></textarea>
+        <textarea id="form-objective" placeholder="Describe the product goal..."></textarea>
       </div>
       <div class="form-group">
         <label>Workflows</label>
@@ -2173,7 +2173,7 @@ function openCreateForm() {
         <div id="form-sources" class="form-auto-sources" style="color:#aaa;">Select fields to see required sources</div>
       </div>
       <div class="form-btns">
-        <button class="btn-save" onclick="saveNewProject()">Save Project</button>
+        <button class="btn-save" onclick="saveNewProject()">Save Product</button>
         <button class="btn-cancel" onclick="cancelCreateForm()">Cancel</button>
       </div>
     </div>
